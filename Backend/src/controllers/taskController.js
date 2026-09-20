@@ -2,6 +2,7 @@ const Task = require("../models/Task");
 const User = require("../models/User");
 const Comment = require("../models/Comment");
 const TaskHistory = require("../models/TaskHistory");
+const Notification = require("../models/Notification");
 const { addDeadlineFlags } = require("../utils/deadline");
 
 // Allowed values (must match the Task model enums)
@@ -400,6 +401,10 @@ const deleteTask = async (req, res) => {
 
     // Comments belong to the task, so remove them too
     await Comment.deleteMany({ task: task._id });
+
+    // Reminders of a deleted task are not needed anymore
+    await Notification.deleteMany({ task: task._id });
+
     await Task.findByIdAndDelete(task._id);
 
     return res.status(200).json({
