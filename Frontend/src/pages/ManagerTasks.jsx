@@ -17,6 +17,16 @@ const ManagerTasks = () => {
     dueDate: "",
   });
 
+  // Edit/reassign: which task is being edited and its form values
+  const [editingId, setEditingId] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    title: "",
+    description: "",
+    assignedTo: "",
+    priority: "Medium",
+    dueDate: "",
+  });
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -78,6 +88,43 @@ const ManagerTasks = () => {
     }
   };
 
+  // Fills the edit form with the task's current values
+  const handleStartEdit = (task) => {
+    setEditingId(task._id);
+
+    setEditFormData({
+      title: task.title,
+      description: task.description || "",
+      assignedTo: task.assignedTo?._id || "",
+      priority: task.priority,
+      dueDate: task.dueDate ? task.dueDate.slice(0, 10) : "",
+    });
+  };
+
+  const handleEditChange = (e) => {
+    setEditFormData({
+      ...editFormData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  // Saves the edited task through the existing update API.
+  // Changing "Assign To" here is what reassigns the task.
+  const handleUpdateTask = async (e) => {
+    e.preventDefault();
+
+    try {
+      await api.put(`/tasks/${editingId}`, editFormData);
+
+      setMessage("Task updated successfully");
+
+      setEditingId(null);
+      loadTasks();
+    } catch (error) {
+      setMessage(error.response?.data?.message || "Could not update task");
+    }
+  };
+
   return (
     <div className="page">
       <h1>Tasks</h1>
@@ -132,6 +179,52 @@ const ManagerTasks = () => {
         <button type="submit">Create Task</button>
       </form>
 
+      {/* Edit/reassign form, shown only while editing a task */}
+      {editingId && (
+        <form onSubmit={handleUpdateTask}>
+          <h2>Edit Task</h2>
+
+          <div>
+            <label>Title</label>
+            <input name="title" value={editFormData.title} onChange={handleEditChange} required />
+          </div>
+
+          <div>
+            <label>Description</label>
+            <input name="description" value={editFormData.description} onChange={handleEditChange} />
+          </div>
+
+          <div>
+            <label>Assign To</label>
+            <select name="assignedTo" value={editFormData.assignedTo} onChange={handleEditChange} required>
+              {employees.map((employee) => (
+                <option key={employee._id} value={employee._id}>
+                  {employee.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label>Priority</label>
+            <select name="priority" value={editFormData.priority} onChange={handleEditChange}>
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+              <option>Urgent</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Due Date</label>
+            <input type="date" name="dueDate" value={editFormData.dueDate} onChange={handleEditChange} required />
+          </div>
+
+          <button type="submit">Save Changes</button>
+          <button type="button" onClick={() => setEditingId(null)}>Cancel</button>
+        </form>
+      )}
+
       <div className="card">
         <h2>All Tasks</h2>
 
@@ -161,6 +254,7 @@ const ManagerTasks = () => {
                 <td>{task.dueDate ? task.dueDate.slice(0, 10) : "-"}</td>
                 <td>{task.isOverdue ? "Yes" : "No"}</td>
                 <td>
+                  <button onClick={() => handleStartEdit(task)}>Edit</button>{" "}
                   <button onClick={() => handleDeleteTask(task._id)}>Delete</button>
                 </td>
               </tr>

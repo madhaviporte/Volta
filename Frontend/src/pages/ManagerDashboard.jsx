@@ -79,6 +79,8 @@ const ManagerDashboard = () => {
         </p>
       </div>
 
+      {/* Main task tracker: one table showing which task belongs
+          to which employee and its current status */}
       <div className="card">
         <h2>Tasks</h2>
 
@@ -88,8 +90,9 @@ const ManagerDashboard = () => {
           <table border="1" cellPadding="6">
             <thead>
               <tr>
-                <th>Title</th>
-                <th>Assigned To</th>
+                <th>Task</th>
+                <th>Employee</th>
+                <th>Priority</th>
                 <th>Status</th>
                 <th>Due Date</th>
                 <th>Overdue</th>
@@ -102,6 +105,7 @@ const ManagerDashboard = () => {
                     <Link to={`/tasks/${task._id}`}>{task.title}</Link>
                   </td>
                   <td>{task.assignedTo?.name}</td>
+                  <td>{task.priority}</td>
                   <td>{task.status}</td>
                   <td>{task.dueDate ? task.dueDate.slice(0, 10) : "-"}</td>
                   <td>{task.isOverdue ? "Yes" : "No"}</td>
