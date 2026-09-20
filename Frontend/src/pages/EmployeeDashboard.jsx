@@ -20,6 +20,14 @@ const EmployeeDashboard = () => {
   const [tasks, setTasks] = useState([]);
   const [error, setError] = useState("");
 
+  // Upcoming and overdue lists are filtered from the same task list
+  // the backend already sends. The backend adds the flags:
+  // dueSoon = deadline within the next 3 days, isOverdue = past deadline
+  // and not completed. No new date calculation happens here.
+  const upcomingTasks = tasks.filter((task) => task.dueSoon);
+
+  const overdueTasks = tasks.filter((task) => task.isOverdue);
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -78,6 +86,68 @@ const EmployeeDashboard = () => {
         <p>
           <strong>Overdue Tasks:</strong> {stats.overdueTasks}
         </p>
+      </div>
+
+      <div className="card">
+        <h2>Upcoming Tasks</h2>
+
+        {upcomingTasks.length === 0 && <p>No upcoming deadlines in the next 3 days</p>}
+
+        {upcomingTasks.length > 0 && (
+          <table border="1" cellPadding="6">
+            <thead>
+              <tr>
+                <th>Task</th>
+                <th>Priority</th>
+                <th>Due Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {upcomingTasks.map((task) => (
+                <tr key={task._id}>
+                  <td>
+                    <Link to={`/tasks/${task._id}`}>{task.title}</Link>
+                  </td>
+                  <td>{task.priority}</td>
+                  <td>{task.dueDate ? task.dueDate.slice(0, 10) : "-"}</td>
+                  <td>{task.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="card">
+        <h2>Overdue Tasks</h2>
+
+        {overdueTasks.length === 0 && <p>No overdue tasks</p>}
+
+        {overdueTasks.length > 0 && (
+          <table border="1" cellPadding="6">
+            <thead>
+              <tr>
+                <th>Task</th>
+                <th>Priority</th>
+                <th>Due Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {overdueTasks.map((task) => (
+                <tr key={task._id}>
+                  <td>
+                    <Link to={`/tasks/${task._id}`}>{task.title}</Link>
+                  </td>
+                  <td>{task.priority}</td>
+                  <td>{task.dueDate ? task.dueDate.slice(0, 10) : "-"}</td>
+                  <td>{task.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="card">
