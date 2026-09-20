@@ -18,6 +18,7 @@ const ManagerDashboard = () => {
   });
 
   const [tasks, setTasks] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [error, setError] = useState("");
 
   const handleLogout = () => {
@@ -32,6 +33,7 @@ const ManagerDashboard = () => {
         const response = await api.get("/dashboard/manager");
 
         setStats(response.data.data.overall);
+        setEmployees(response.data.data.employees);
       } catch (apiError) {
         setError(apiError.response?.data?.message || "Could not load statistics");
       }
@@ -77,6 +79,41 @@ const ManagerDashboard = () => {
         <p>
           <strong>Overdue Tasks:</strong> {stats.overdueTasks}
         </p>
+      </div>
+
+      {/* Employee-wise overview. The numbers come from the same
+          dashboard API response, so no extra request is needed. */}
+      <div className="card">
+        <h2>Employee Task Overview</h2>
+
+        {employees.length === 0 && <p>No employees with tasks yet</p>}
+
+        {employees.length > 0 && (
+          <table border="1" cellPadding="6">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Total Tasks</th>
+                <th>Pending</th>
+                <th>In Progress</th>
+                <th>Completed</th>
+                <th>Overdue</th>
+              </tr>
+            </thead>
+            <tbody>
+              {employees.map((employee) => (
+                <tr key={employee.id}>
+                  <td>{employee.employee}</td>
+                  <td>{employee.totalTasks}</td>
+                  <td>{employee.pending}</td>
+                  <td>{employee.inProgress}</td>
+                  <td>{employee.completed}</td>
+                  <td>{employee.overdue}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Main task tracker: one table showing which task belongs

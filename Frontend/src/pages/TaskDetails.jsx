@@ -10,6 +10,7 @@ const TaskDetails = () => {
 
   const [task, setTask] = useState(null);
   const [comments, setComments] = useState([]);
+  const [history, setHistory] = useState([]);
   const [commentMessage, setCommentMessage] = useState("");
   const [message, setMessage] = useState("");
 
@@ -37,9 +38,21 @@ const TaskDetails = () => {
     }
   };
 
+  // Loads the recorded actions for this task
+  // (creation, assignment, reassignment, status changes, edits)
+  const loadHistory = async () => {
+    try {
+      const response = await api.get(`/tasks/${taskId}/history`);
+      setHistory(response.data.data);
+    } catch (error) {
+      setMessage("Could not load history");
+    }
+  };
+
   useEffect(() => {
     loadTask();
     loadComments();
+    loadHistory();
   }, [taskId]);
 
   const handleStatusChange = async (e) => {
@@ -124,6 +137,24 @@ const TaskDetails = () => {
             <option>On Hold</option>
           </select>
         </div>
+      </div>
+
+      <div className="card">
+        <h2>Task History</h2>
+
+        {history.length === 0 && <p>No history recorded</p>}
+
+        {history.map((entry) => (
+          <p key={entry._id}>
+            {new Date(entry.createdAt).toLocaleString()} —{" "}
+            <strong>{entry.action}</strong> by {entry.performedBy?.name}
+            {entry.action === "STATUS_CHANGED" &&
+              ` (${entry.oldValue} → ${entry.newValue})`}
+            {entry.action === "REASSIGNED" &&
+              ` (${entry.oldValue || "none"} → ${entry.newValue})`}
+            {entry.action === "ASSIGNED" && ` to ${entry.newValue}`}
+          </p>
+        ))}
       </div>
 
       <div className="card">

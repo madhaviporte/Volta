@@ -254,6 +254,7 @@ const ManagerTasks = () => {
                 <td>{task.dueDate ? task.dueDate.slice(0, 10) : "-"}</td>
                 <td>{task.isOverdue ? "Yes" : "No"}</td>
                 <td>
+                  <Link to={`/tasks/${task._id}`}>View</Link>{" "}
                   <button onClick={() => handleStartEdit(task)}>Edit</button>{" "}
                   <button onClick={() => handleDeleteTask(task._id)}>Delete</button>
                 </td>
