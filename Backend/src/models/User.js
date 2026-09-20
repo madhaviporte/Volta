@@ -47,4 +47,13 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+// Password must never appear in an API response,
+// so it is removed whenever a user is converted to JSON
+userSchema.set("toJSON", {
+  transform: function (doc, userObject) {
+    delete userObject.password;
+    return userObject;
+  },
+});
+
 module.exports = mongoose.model("User", userSchema);

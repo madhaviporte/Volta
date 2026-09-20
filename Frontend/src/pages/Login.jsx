@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 
 const Login = () => {
@@ -23,9 +23,12 @@ const Login = () => {
 
       setMessage("Login successful");
 
-      console.log("Login response:", response.data);
-
-      navigate("/dashboard");
+      // The backend decides the role, and it decides where the user goes
+      if (response.data.user.role === "manager") {
+        navigate("/manager/dashboard");
+      } else {
+        navigate("/employee/dashboard");
+      }
     } catch (error) {
       setMessage(
         error.response?.data?.message || "Login failed"
@@ -62,11 +65,6 @@ const Login = () => {
       </form>
 
       {message && <p>{message}</p>}
-
-      <p>
-        Don't have an account?{" "}
-        <Link to="/register">Register</Link>
-      </p>
     </div>
   );
 };
