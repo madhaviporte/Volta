@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
+import NotificationBell from "../components/NotificationBell";
 
 const EmployeeDashboard = () => {
   const navigate = useNavigate();
@@ -68,6 +69,11 @@ const EmployeeDashboard = () => {
       <h1>Employee Dashboard</h1>
 
       <h2>Welcome, {user ? user.name : "Employee"}</h2>
+
+      {/* Notification bell for the logged-in employee (Requirement #5) */}
+      <div className="notif-area">
+        <NotificationBell />
+      </div>
 
       {error && <p>{error}</p>}
 
