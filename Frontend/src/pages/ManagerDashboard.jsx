@@ -15,11 +15,17 @@ const ManagerDashboard = () => {
     inProgressTasks: 0,
     completedTasks: 0,
     overdueTasks: 0,
+    upcomingTasks: 0,
   });
 
   const [tasks, setTasks] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [error, setError] = useState("");
+
+  // Upcoming deadlines are filtered from the same task list the backend
+  // already sends. The backend adds the dueSoon flag (deadline within the
+  // next 3 days and not completed), so no new date calculation is done here.
+  const upcomingTasks = tasks.filter((task) => task.dueSoon);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -79,6 +85,43 @@ const ManagerDashboard = () => {
         <p>
           <strong>Overdue Tasks:</strong> {stats.overdueTasks}
         </p>
+        <p>
+          <strong>Upcoming Tasks (next 3 days):</strong> {stats.upcomingTasks}
+        </p>
+      </div>
+
+      {/* Upcoming deadlines overview, straight from the real task list */}
+      <div className="card">
+        <h2>Upcoming Deadlines</h2>
+
+        {upcomingTasks.length === 0 && <p>No upcoming deadlines in the next 3 days</p>}
+
+        {upcomingTasks.length > 0 && (
+          <table border="1" cellPadding="6">
+            <thead>
+              <tr>
+                <th>Task</th>
+                <th>Employee</th>
+                <th>Priority</th>
+                <th>Due Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {upcomingTasks.map((task) => (
+                <tr key={task._id}>
+                  <td>
+                    <Link to={`/tasks/${task._id}`}>{task.title}</Link>
+                  </td>
+                  <td>{task.assignedTo?.name}</td>
+                  <td>{task.priority}</td>
+                  <td>{task.dueDate ? task.dueDate.slice(0, 10) : "-"}</td>
+                  <td>{task.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Employee-wise overview. The numbers come from the same

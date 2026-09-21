@@ -15,6 +15,7 @@ const EmployeeDashboard = () => {
     inProgressTasks: 0,
     completedTasks: 0,
     overdueTasks: 0,
+    upcomingTasks: 0,
   });
 
   const [tasks, setTasks] = useState([]);
@@ -85,6 +86,9 @@ const EmployeeDashboard = () => {
         </p>
         <p>
           <strong>Overdue Tasks:</strong> {stats.overdueTasks}
+        </p>
+        <p>
+          <strong>Upcoming Tasks (next 3 days):</strong> {stats.upcomingTasks}
         </p>
       </div>
 
