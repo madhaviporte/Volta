@@ -1,9 +1,22 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  Clock,
+  History,
+  MessageSquare,
+  Send,
+  AlertCircle,
+} from "lucide-react";
 import api from "../services/api";
+import Navbar from "../components/Navbar";
+
+const renderPriorityBadge = (priority) => {
+  const p = (priority || "Medium").toLowerCase();
+  return <span className={`badge badge-priority-${p}`}>{priority || "Medium"}</span>;
+};
 
 const TaskDetails = () => {
-  const navigate = useNavigate();
   const { taskId } = useParams();
 
   const user = JSON.parse(localStorage.getItem("user") || "null");
@@ -14,39 +27,39 @@ const TaskDetails = () => {
   const [commentMessage, setCommentMessage] = useState("");
   const [message, setMessage] = useState("");
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
+  const loadTask = () => {
+    return api
+      .get(`/tasks/${taskId}`)
+      .then((response) => {
+        setTask(response.data.data);
+      })
+      .catch((error) => {
+        setMessage(error.response?.data?.message || "Could not load task");
+      });
   };
 
-  const loadTask = async () => {
-    try {
-      const response = await api.get(`/tasks/${taskId}`);
-      setTask(response.data.data);
-    } catch (error) {
-      setMessage(error.response?.data?.message || "Could not load task");
-    }
-  };
-
-  const loadComments = async () => {
-    try {
-      const response = await api.get(`/tasks/${taskId}/comments`);
-      setComments(response.data.data);
-    } catch (error) {
-      setMessage("Could not load comments");
-    }
+  const loadComments = () => {
+    return api
+      .get(`/tasks/${taskId}/comments`)
+      .then((response) => {
+        setComments(response.data.data);
+      })
+      .catch(() => {
+        setMessage("Could not load comments");
+      });
   };
 
   // Loads the recorded actions for this task
   // (creation, assignment, reassignment, status changes, edits)
-  const loadHistory = async () => {
-    try {
-      const response = await api.get(`/tasks/${taskId}/history`);
-      setHistory(response.data.data);
-    } catch (error) {
-      setMessage("Could not load history");
-    }
+  const loadHistory = () => {
+    return api
+      .get(`/tasks/${taskId}/history`)
+      .then((response) => {
+        setHistory(response.data.data);
+      })
+      .catch(() => {
+        setMessage("Could not load history");
+      });
   };
 
   useEffect(() => {
@@ -79,110 +92,213 @@ const TaskDetails = () => {
 
   if (!task) {
     return (
-      <div className="page">
-        <p>{message || "Loading task..."}</p>
+      <div className="app-layout">
+        <Navbar />
+        <main className="main-content">
+          <div className="empty-state">
+            <p>{message || "Loading task details..."}</p>
+          </div>
+        </main>
       </div>
     );
   }
 
+  const backLink =
+    user && user.role === "manager" ? "/manager/tasks" : "/employee/dashboard";
+  const backText =
+    user && user.role === "manager" ? "Back to Tasks" : "Back to My Tasks";
+
   return (
-    <div className="page">
-      <h1>Task Details</h1>
+    <div className="app-layout">
+      <Navbar />
 
-      {user && user.role === "manager" ? (
-        <p>
-          <Link to="/manager/tasks">Back to Tasks</Link>
-        </p>
-      ) : (
-        <p>
-          <Link to="/employee/dashboard">Back to My Tasks</Link>
-        </p>
-      )}
+      <main className="main-content">
+        <div style={{ marginBottom: "20px" }}>
+          <Link to={backLink} className="btn btn-secondary btn-sm">
+            <ArrowLeft size={14} />
+            <span>{backText}</span>
+          </Link>
+        </div>
 
-      {message && <p>{message}</p>}
-
-      <div className="card">
-        <h2>{task.title}</h2>
-        <p>
-          <strong>Description:</strong> {task.description || "-"}
-        </p>
-        <p>
-          <strong>Priority:</strong> {task.priority}
-        </p>
-        <p>
-          <strong>Status:</strong> {task.status}
-        </p>
-        <p>
-          <strong>Due Date:</strong> {task.dueDate ? task.dueDate.slice(0, 10) : "-"}
-          {task.isOverdue ? " (Overdue)" : ""}
-        </p>
-        <p>
-          <strong>Assigned To:</strong> {task.assignedTo?.name}
-        </p>
-        <p>
-          <strong>Created By:</strong> {task.createdBy?.name}
-        </p>
-        {task.completedAt && (
-          <p>
-            <strong>Completed At:</strong> {task.completedAt.slice(0, 10)}
-          </p>
+        {message && (
+          <div className="alert-banner error">
+            <AlertCircle size={16} />
+            <span>{message}</span>
+          </div>
         )}
 
-        <div>
-          <label>Change Status</label>
-          <select value={task.status} onChange={handleStatusChange}>
-            <option>Pending</option>
-            <option>In Progress</option>
-            <option>Completed</option>
-            <option>On Hold</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>Task History</h2>
-
-        {history.length === 0 && <p>No history recorded</p>}
-
-        {history.map((entry) => (
-          <p key={entry._id}>
-            {new Date(entry.createdAt).toLocaleString()} —{" "}
-            <strong>{entry.action}</strong> by {entry.performedBy?.name}
-            {entry.action === "STATUS_CHANGED" &&
-              ` (${entry.oldValue} → ${entry.newValue})`}
-            {entry.action === "REASSIGNED" &&
-              ` (${entry.oldValue || "none"} → ${entry.newValue})`}
-            {entry.action === "ASSIGNED" && ` to ${entry.newValue}`}
-          </p>
-        ))}
-      </div>
-
-      <div className="card">
-        <h2>Comments</h2>
-
-        {comments.length === 0 && <p>No comments yet</p>}
-
-        {comments.map((comment) => (
-          <p key={comment._id}>
-            <strong>{comment.user?.name}:</strong> {comment.message}
-          </p>
-        ))}
-
-        <form onSubmit={handleAddComment}>
+        <div className="task-detail-grid">
+          {/* Main Task Info & History */}
           <div>
-            <label>Add Comment</label>
-            <input
-              name="message"
-              value={commentMessage}
-              onChange={(e) => setCommentMessage(e.target.value)}
-              required
-            />
-          </div>
-          <button type="submit">Add Comment</button>
-        </form>
-      </div>
+            <div className="card-section">
+              <div className="card-header" style={{ alignItems: "flex-start" }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                    {renderPriorityBadge(task.priority)}
+                    {task.isOverdue && (
+                      <span className="badge badge-overdue">Overdue</span>
+                    )}
+                  </div>
+                  <h1 style={{ fontSize: "22px", fontWeight: 700, color: "var(--text-main)" }}>
+                    {task.title}
+                  </h1>
+                </div>
 
-      <button onClick={handleLogout}>Logout</button>
+                <div className="form-group" style={{ margin: 0, minWidth: "160px" }}>
+                  <label style={{ fontSize: "11px", textTransform: "uppercase", color: "var(--text-muted)" }}>
+                    Update Status
+                  </label>
+                  <select
+                    className="form-control"
+                    value={task.status}
+                    onChange={handleStatusChange}
+                    style={{ fontWeight: 600 }}
+                  >
+                    <option>Pending</option>
+                    <option>In Progress</option>
+                    <option>Completed</option>
+                    <option>On Hold</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ margin: "16px 0", color: "var(--text-main)", fontSize: "14px" }}>
+                <strong>Description:</strong>
+                <p style={{ marginTop: "4px", color: "var(--text-muted)", whiteSpace: "pre-line" }}>
+                  {task.description || "No description provided."}
+                </p>
+              </div>
+
+              <div className="meta-list">
+                <div className="meta-item">
+                  <span className="meta-label">Assigned To</span>
+                  <span className="meta-value">{task.assignedTo?.name || "Unassigned"}</span>
+                </div>
+
+                <div className="meta-item">
+                  <span className="meta-label">Created By</span>
+                  <span className="meta-value">{task.createdBy?.name || "System"}</span>
+                </div>
+
+                <div className="meta-item">
+                  <span className="meta-label">Due Date</span>
+                  <span className="meta-value">
+                    {task.dueDate ? task.dueDate.slice(0, 10) : "-"}
+                  </span>
+                </div>
+
+                {task.completedAt && (
+                  <div className="meta-item">
+                    <span className="meta-label">Completed On</span>
+                    <span className="meta-value">
+                      {task.completedAt.slice(0, 10)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Task History Timeline */}
+            <div className="card-section">
+              <div className="card-header">
+                <div className="card-title-group">
+                  <History size={18} className="text-muted" />
+                  <h2>Activity Audit History</h2>
+                </div>
+              </div>
+
+              {history.length === 0 ? (
+                <div className="empty-state">No history recorded for this task</div>
+              ) : (
+                <div className="timeline">
+                  {history.map((entry) => (
+                    <div className="timeline-entry" key={entry._id}>
+                      <div className="timeline-icon">
+                        <Clock size={12} />
+                      </div>
+                      <div className="timeline-content">
+                        <span className="timeline-time">
+                          {new Date(entry.createdAt).toLocaleString()}
+                        </span>
+                        <div className="timeline-text">
+                          <strong>{entry.action}</strong> by{" "}
+                          <span>{entry.performedBy?.name || "User"}</span>
+                          {entry.action === "STATUS_CHANGED" && (
+                            <span style={{ color: "var(--text-muted)" }}>
+                              {" "}
+                              ({entry.oldValue} → {entry.newValue})
+                            </span>
+                          )}
+                          {entry.action === "REASSIGNED" && (
+                            <span style={{ color: "var(--text-muted)" }}>
+                              {" "}
+                              ({entry.oldValue || "none"} → {entry.newValue})
+                            </span>
+                          )}
+                          {entry.action === "ASSIGNED" && (
+                            <span style={{ color: "var(--text-muted)" }}>
+                              {" "}
+                              to {entry.newValue}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Comments Section */}
+          <div>
+            <div className="card-section">
+              <div className="card-header">
+                <div className="card-title-group">
+                  <MessageSquare size={18} className="text-muted" />
+                  <h2>Comments ({comments.length})</h2>
+                </div>
+              </div>
+
+              <div className="comments-feed">
+                {comments.length === 0 ? (
+                  <div className="empty-state" style={{ padding: "16px 0" }}>
+                    No comments yet. Start the conversation!
+                  </div>
+                ) : (
+                  comments.map((comment) => (
+                    <div className="comment-bubble" key={comment._id}>
+                      <div className="comment-author">
+                        {comment.user?.name || "User"}
+                      </div>
+                      <div className="comment-text">{comment.message}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <form onSubmit={handleAddComment}>
+                <div className="form-group">
+                  <label>Add a comment</label>
+                  <textarea
+                    name="message"
+                    className="form-control"
+                    rows="3"
+                    placeholder="Type your comment or update..."
+                    value={commentMessage}
+                    onChange={(e) => setCommentMessage(e.target.value)}
+                    required
+                  ></textarea>
+                </div>
+                <button type="submit" className="btn btn-primary" style={{ width: "100%" }}>
+                  <Send size={14} />
+                  <span>Post Comment</span>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 };

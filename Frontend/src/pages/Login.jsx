@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Zap, Mail, Lock, LogIn, AlertCircle } from "lucide-react";
 import api from "../services/api";
 
 const Login = () => {
@@ -37,34 +38,84 @@ const Login = () => {
   };
 
   return (
-    <div>
-      <h1>Volta Login</h1>
-
-      <form onSubmit={handleLogin}>
-        <div>
-          <label>Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
+    <div className="login-page-container">
+      <div className="login-card">
+        <div className="login-header">
+          <div className="login-logo">
+            <Zap size={28} />
+          </div>
+          <h1>Sign in to Volta</h1>
+          <p>Enterprise Task & Team OS</p>
         </div>
 
-        <div>
-          <label>Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
+        {message && (
+          <div className={`alert-banner ${message.toLowerCase().includes("successful") ? "success" : "error"}`}>
+            <AlertCircle size={16} />
+            <span>{message}</span>
+          </div>
+        )}
 
-        <button type="submit">Login</button>
-      </form>
+        <form onSubmit={handleLogin}>
+          <div className="form-group">
+            <label>Email Address</label>
+            <div style={{ position: "relative" }}>
+              <input
+                type="email"
+                className="form-control"
+                placeholder="name@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                style={{ paddingLeft: "36px" }}
+              />
+              <Mail
+                size={16}
+                style={{
+                  position: "absolute",
+                  left: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "#94a3b8",
+                }}
+              />
+            </div>
+          </div>
 
-      {message && <p>{message}</p>}
+          <div className="form-group">
+            <label>Password</label>
+            <div style={{ position: "relative" }}>
+              <input
+                type="password"
+                className="form-control"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                style={{ paddingLeft: "36px" }}
+              />
+              <Lock
+                size={16}
+                style={{
+                  position: "absolute",
+                  left: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "#94a3b8",
+                }}
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ width: "100%", marginTop: "12px" }}
+          >
+            <LogIn size={16} />
+            <span>Login to Portal</span>
+          </button>
+        </form>
+      </div>
     </div>
   );
 };

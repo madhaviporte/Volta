@@ -1,0 +1,244 @@
+body {
+  margin: 0;
+  background: #f5f6f8;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #222;
+}
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  text-align: center;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 24px 32px;
+  margin: 20px 0;
+  min-width: 280px;
+  text-align: left;
+}
+
+.card p {
+  margin: 8px 0;
+}
+
+form {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 320px;
+}
+
+label {
+  font-weight: bold;
+  display: block;
+  margin-bottom: 4px;
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+button {
+  padding: 10px 16px;
+  border: 1px solid #333;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #eee;
+}
+
+form button[type="submit"] {
+  background: #333;
+  color: #fff;
+  margin-top: 8px;
+}
+
+form button[type="submit"]:hover {
+  background: #444;
+}
+
+/* ---------- Notifications (bell + dropdown) ---------- */
+
+/* Keeps the bell near the welcome heading without
+   disturbing the existing centered layout. */
+.notif-area {
+  margin-bottom: 16px;
+}
+
+.notif-root {
+  position: relative;
+  display: inline-block;
+}
+
+/* Round bell button with the unread badge on its corner */
+.notif-bell {
+  position: relative;
+  font-size: 20px;
+  line-height: 1;
+  padding: 8px 10px;
+  border: 1px solid #333;
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.notif-bell:hover {
+  background: #eee;
+}
+
+.notif-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #d64545;
+  color: #fff;
+  font-size: 11px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+/* Dropdown panel anchored to the bell (centered so it never
+   overflows the screen edge, even on small displays) */
+.notif-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  text-align: left;
+}
+
+.notif-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.notif-list {
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.notif-state {
+  padding: 16px;
+  margin: 0;
+  color: #666;
+}
+
+.notif-error {
+  color: #d64545;
+}
+
+.notif-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.notif-item:last-child {
+  border-bottom: none;
+}
+
+/* Unread items are highlighted; read items are dimmed */
+.notif-item.unread {
+  background: #f0f6ff;
+}
+
+.notif-item.read {
+  color: #777;
+}
+
+.notif-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.notif-type {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.notif-type.deadline_soon {
+  color: #b8860b;
+}
+
+.notif-type.overdue {
+  color: #d64545;
+}
+
+.notif-time {
+  font-size: 12px;
+  color: #888;
+  white-space: nowrap;
+}
+
+.notif-message {
+  margin: 4px 0;
+}
+
+.notif-task {
+  margin: 4px 0;
+  font-size: 13px;
+  color: #555;
+}
+
+/* Small text-style buttons inside the panel */
+.notif-link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: #1a5fb4;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.notif-link:hover {
+  background: none;
+  text-decoration: underline;
+}
+
+/* On small screens the panel fills the width nicely */
+@media (max-width: 480px) {
+  .notif-panel {
+    width: calc(100vw - 24px);
+  }
+}
+
+

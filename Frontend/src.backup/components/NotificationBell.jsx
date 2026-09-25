@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell, CheckCheck, Clock, AlertTriangle, Check, Layers } from "lucide-react";
 import api from "../services/api";
 
 // Formats an ISO date string as DD/MM/YYYY (what the dashboards already use).
@@ -79,8 +78,7 @@ const NotificationBell = () => {
   // Load once when the bell is shown so the unread badge is current.
   useEffect(() => {
     loadNotifications();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadNotifications]);
 
   // Close the panel on outside click (mousedown, so the toggling
   // button still works) or Escape.
@@ -152,7 +150,7 @@ const NotificationBell = () => {
         }}
         aria-label={`Notifications (${unreadCount} unread)`}
       >
-        <Bell size={18} />
+        <span aria-hidden="true">🔔</span>
 
         {unreadCount > 0 && (
           <span className="notif-badge">
@@ -168,7 +166,6 @@ const NotificationBell = () => {
 
             {unreadCount > 0 && (
               <button type="button" className="notif-link" onClick={markAllAsRead}>
-                <CheckCheck size={14} style={{ display: "inline", marginRight: "4px", verticalAlign: "middle" }} />
                 Mark all as read
               </button>
             )}
@@ -192,11 +189,6 @@ const NotificationBell = () => {
                 >
                   <div className="notif-item-top">
                     <span className={`notif-type ${notification.type}`}>
-                      {notification.type === "overdue" ? (
-                        <AlertTriangle size={12} style={{ display: "inline", marginRight: "4px" }} />
-                      ) : (
-                        <Clock size={12} style={{ display: "inline", marginRight: "4px" }} />
-                      )}
                       {TYPE_LABELS[notification.type] || notification.type}
                     </span>
                     <span className="notif-time">
@@ -210,8 +202,7 @@ const NotificationBell = () => {
 
                   {notification.task && (
                     <p className="notif-task">
-                      <Layers size={11} style={{ display: "inline", marginRight: "4px" }} />
-                      {notification.task.title}
+                      Task: {notification.task.title}
                       {notification.task.dueDate && (
                         <span> · due {formatDate(notification.task.dueDate)}</span>
                       )}
@@ -223,9 +214,7 @@ const NotificationBell = () => {
                       type="button"
                       className="notif-link"
                       onClick={() => markAsRead(notification._id)}
-                      style={{ marginTop: "4px", display: "block" }}
                     >
-                      <Check size={12} style={{ display: "inline", marginRight: "3px" }} />
                       Mark as read
                     </button>
                   )}

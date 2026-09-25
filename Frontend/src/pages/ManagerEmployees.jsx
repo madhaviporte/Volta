@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import {
+  Users,
+  UserPlus,
+  UserCheck,
+  UserX,
+  AlertCircle,
+} from "lucide-react";
 import api from "../services/api";
+import Navbar from "../components/Navbar";
 
 const ManagerEmployees = () => {
-  const navigate = useNavigate();
-
   const [employees, setEmployees] = useState([]);
   const [message, setMessage] = useState("");
 
@@ -16,12 +21,6 @@ const ManagerEmployees = () => {
     designation: "",
   });
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
-  };
-
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -29,13 +28,15 @@ const ManagerEmployees = () => {
     });
   };
 
-  const loadEmployees = async () => {
-    try {
-      const response = await api.get("/users?role=employee");
-      setEmployees(response.data.data);
-    } catch (error) {
-      setMessage(error.response?.data?.message || "Could not load employees");
-    }
+  const loadEmployees = () => {
+    return api
+      .get("/users?role=employee")
+      .then((response) => {
+        setEmployees(response.data.data);
+      })
+      .catch((error) => {
+        setMessage(error.response?.data?.message || "Could not load employees");
+      });
   };
 
   useEffect(() => {
@@ -71,83 +72,174 @@ const ManagerEmployees = () => {
   };
 
   return (
-    <div className="page">
-      <h1>Employees</h1>
+    <div className="app-layout">
+      <Navbar />
 
-      <p>
-        <Link to="/manager/dashboard">Dashboard</Link> |{" "}
-        <Link to="/manager/tasks">Tasks</Link>
-      </p>
-
-      {message && <p>{message}</p>}
-
-      <form onSubmit={handleAddEmployee}>
-        <h2>Add Employee</h2>
-
-        <div>
-          <label>Name</label>
-          <input name="name" value={formData.name} onChange={handleChange} required />
+      <main className="main-content">
+        <div className="page-header">
+          <div className="page-title-group">
+            <h1>Employee Directory</h1>
+            <p>Add new team members and manage active access permissions.</p>
+          </div>
         </div>
 
-        <div>
-          <label>Email</label>
-          <input type="email" name="email" value={formData.email} onChange={handleChange} required />
+        {message && (
+          <div
+            className={`alert-banner ${
+              message.toLowerCase().includes("created") ? "success" : "error"
+            }`}
+          >
+            <AlertCircle size={16} />
+            <span>{message}</span>
+          </div>
+        )}
+
+        {/* Add Employee Form */}
+        <div className="form-card">
+          <div className="form-title">
+            <UserPlus size={18} className="text-muted" />
+            <span>Add New Employee</span>
+          </div>
+
+          <form onSubmit={handleAddEmployee}>
+            <div className="form-grid">
+              <div className="form-group">
+                <label>Full Name *</label>
+                <input
+                  name="name"
+                  className="form-control"
+                  placeholder="e.g. John Doe"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Email Address *</label>
+                <input
+                  type="email"
+                  name="email"
+                  className="form-control"
+                  placeholder="john@company.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Password *</label>
+                <input
+                  type="password"
+                  name="password"
+                  className="form-control"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Department</label>
+                <input
+                  name="department"
+                  className="form-control"
+                  placeholder="e.g. Engineering"
+                  value={formData.department}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Designation</label>
+                <input
+                  name="designation"
+                  className="form-control"
+                  placeholder="e.g. Senior Frontend Dev"
+                  value={formData.designation}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div className="form-actions">
+              <button type="submit" className="btn btn-primary">
+                <UserPlus size={16} />
+                <span>Create Employee Account</span>
+              </button>
+            </div>
+          </form>
         </div>
 
-        <div>
-          <label>Password</label>
-          <input type="password" name="password" value={formData.password} onChange={handleChange} required />
+        {/* All Employees Directory */}
+        <div className="card-section">
+          <div className="card-header">
+            <div className="card-title-group">
+              <Users size={18} className="text-muted" />
+              <h2>All Employees ({employees.length})</h2>
+            </div>
+          </div>
+
+          {employees.length === 0 ? (
+            <div className="empty-state">No employees added yet</div>
+          ) : (
+            <div className="table-responsive">
+              <table className="modern-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Department</th>
+                    <th>Designation</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {employees.map((employee) => (
+                    <tr key={employee._id}>
+                      <td style={{ fontWeight: 600 }}>{employee.name}</td>
+                      <td>{employee.email}</td>
+                      <td>{employee.department || "-"}</td>
+                      <td>{employee.designation || "-"}</td>
+                      <td>
+                        {employee.isActive ? (
+                          <span className="badge badge-active">Active</span>
+                        ) : (
+                          <span className="badge badge-inactive">Inactive</span>
+                        )}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className={`btn btn-sm ${
+                            employee.isActive ? "btn-danger" : "btn-secondary"
+                          }`}
+                          onClick={() => toggleStatus(employee)}
+                        >
+                          {employee.isActive ? (
+                            <>
+                              <UserX size={12} />
+                              <span>Deactivate</span>
+                            </>
+                          ) : (
+                            <>
+                              <UserCheck size={12} />
+                              <span>Activate</span>
+                            </>
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-
-        <div>
-          <label>Department</label>
-          <input name="department" value={formData.department} onChange={handleChange} />
-        </div>
-
-        <div>
-          <label>Designation</label>
-          <input name="designation" value={formData.designation} onChange={handleChange} />
-        </div>
-
-        <button type="submit">Add Employee</button>
-      </form>
-
-      <div className="card">
-        <h2>All Employees</h2>
-
-        {employees.length === 0 && <p>No employees yet</p>}
-
-        <table border="1" cellPadding="6">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Department</th>
-              <th>Designation</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {employees.map((employee) => (
-              <tr key={employee._id}>
-                <td>{employee.name}</td>
-                <td>{employee.email}</td>
-                <td>{employee.department}</td>
-                <td>{employee.designation}</td>
-                <td>{employee.isActive ? "Active" : "Inactive"}</td>
-                <td>
-                  <button onClick={() => toggleStatus(employee)}>
-                    {employee.isActive ? "Deactivate" : "Activate"}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <button onClick={handleLogout}>Logout</button>
+      </main>
     </div>
   );
 };

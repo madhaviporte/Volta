@@ -1,10 +1,30 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import {
+  ListTodo,
+  Clock,
+  PlayCircle,
+  CheckCircle2,
+  AlertTriangle,
+  Calendar,
+  Users,
+  AlertCircle,
+  ExternalLink,
+} from "lucide-react";
 import api from "../services/api";
+import Navbar from "../components/Navbar";
+
+const renderPriorityBadge = (priority) => {
+  const p = (priority || "Medium").toLowerCase();
+  return <span className={`badge badge-priority-${p}`}>{priority || "Medium"}</span>;
+};
+
+const renderStatusBadge = (status) => {
+  const s = (status || "Pending").toLowerCase().replace(/\s+/g, "-");
+  return <span className={`badge badge-status-${s}`}>{status || "Pending"}</span>;
+};
 
 const ManagerDashboard = () => {
-  const navigate = useNavigate();
-
   const user = JSON.parse(localStorage.getItem("user") || "null");
 
   // Stats come from the backend. All values start at 0,
@@ -27,12 +47,6 @@ const ManagerDashboard = () => {
   // next 3 days and not completed), so no new date calculation is done here.
   const upcomingTasks = tasks.filter((task) => task.dueSoon);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
-  };
-
   useEffect(() => {
     const loadStats = async () => {
       try {
@@ -40,15 +54,15 @@ const ManagerDashboard = () => {
 
         setStats(response.data.data.overall);
         setEmployees(response.data.data.employees);
-      } catch (apiError) {
-        setError(apiError.response?.data?.message || "Could not load statistics");
+      } catch {
+        setError("Could not load statistics");
       }
 
       try {
         const tasksResponse = await api.get("/tasks");
 
         setTasks(tasksResponse.data.data);
-      } catch (apiError) {
+      } catch {
         setError("Could not load tasks");
       }
     };
@@ -57,146 +71,245 @@ const ManagerDashboard = () => {
   }, []);
 
   return (
-    <div className="page">
-      <h1>Manager Dashboard</h1>
+    <div className="app-layout">
+      <Navbar />
 
-      <h2>Welcome, {user ? user.name : "Manager"}</h2>
+      <main className="main-content">
+        <div className="page-header">
+          <div className="page-title-group">
+            <h1>Manager Dashboard</h1>
+            <p>Welcome back, {user ? user.name : "Manager"}. Overview of team performance & deadlines.</p>
+          </div>
+          <div className="btn-group">
+            <Link to="/manager/tasks" className="btn btn-primary">
+              <ListTodo size={16} />
+              <span>Manage Tasks</span>
+            </Link>
+            <Link to="/manager/employees" className="btn btn-secondary">
+              <Users size={16} />
+              <span>Employees</span>
+            </Link>
+          </div>
+        </div>
 
-      <p>
-        <Link to="/manager/employees">Employees</Link> |{" "}
-        <Link to="/manager/tasks">Tasks</Link>
-      </p>
-
-      {error && <p>{error}</p>}
-
-      <div className="card">
-        <p>
-          <strong>Total Tasks:</strong> {stats.totalTasks}
-        </p>
-        <p>
-          <strong>Pending Tasks:</strong> {stats.pendingTasks}
-        </p>
-        <p>
-          <strong>In Progress Tasks:</strong> {stats.inProgressTasks}
-        </p>
-        <p>
-          <strong>Completed Tasks:</strong> {stats.completedTasks}
-        </p>
-        <p>
-          <strong>Overdue Tasks:</strong> {stats.overdueTasks}
-        </p>
-        <p>
-          <strong>Upcoming Tasks (next 3 days):</strong> {stats.upcomingTasks}
-        </p>
-      </div>
-
-      {/* Upcoming deadlines overview, straight from the real task list */}
-      <div className="card">
-        <h2>Upcoming Deadlines</h2>
-
-        {upcomingTasks.length === 0 && <p>No upcoming deadlines in the next 3 days</p>}
-
-        {upcomingTasks.length > 0 && (
-          <table border="1" cellPadding="6">
-            <thead>
-              <tr>
-                <th>Task</th>
-                <th>Employee</th>
-                <th>Priority</th>
-                <th>Due Date</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {upcomingTasks.map((task) => (
-                <tr key={task._id}>
-                  <td>
-                    <Link to={`/tasks/${task._id}`}>{task.title}</Link>
-                  </td>
-                  <td>{task.assignedTo?.name}</td>
-                  <td>{task.priority}</td>
-                  <td>{task.dueDate ? task.dueDate.slice(0, 10) : "-"}</td>
-                  <td>{task.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {error && (
+          <div className="alert-banner error">
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
         )}
-      </div>
 
-      {/* Employee-wise overview. The numbers come from the same
-          dashboard API response, so no extra request is needed. */}
-      <div className="card">
-        <h2>Employee Task Overview</h2>
+        {/* KPI Stats Grid */}
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-top">
+              <span className="stat-label">Total Tasks</span>
+              <div className="stat-icon total">
+                <ListTodo size={18} />
+              </div>
+            </div>
+            <span className="stat-value">{stats.totalTasks}</span>
+          </div>
 
-        {employees.length === 0 && <p>No employees with tasks yet</p>}
+          <div className="stat-card">
+            <div className="stat-top">
+              <span className="stat-label">Pending</span>
+              <div className="stat-icon pending">
+                <Clock size={18} />
+              </div>
+            </div>
+            <span className="stat-value">{stats.pendingTasks}</span>
+          </div>
 
-        {employees.length > 0 && (
-          <table border="1" cellPadding="6">
-            <thead>
-              <tr>
-                <th>Employee</th>
-                <th>Total Tasks</th>
-                <th>Pending</th>
-                <th>In Progress</th>
-                <th>Completed</th>
-                <th>Overdue</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map((employee) => (
-                <tr key={employee.id}>
-                  <td>{employee.employee}</td>
-                  <td>{employee.totalTasks}</td>
-                  <td>{employee.pending}</td>
-                  <td>{employee.inProgress}</td>
-                  <td>{employee.completed}</td>
-                  <td>{employee.overdue}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+          <div className="stat-card">
+            <div className="stat-top">
+              <span className="stat-label">In Progress</span>
+              <div className="stat-icon progress">
+                <PlayCircle size={18} />
+              </div>
+            </div>
+            <span className="stat-value">{stats.inProgressTasks}</span>
+          </div>
 
-      {/* Main task tracker: one table showing which task belongs
-          to which employee and its current status */}
-      <div className="card">
-        <h2>Tasks</h2>
+          <div className="stat-card">
+            <div className="stat-top">
+              <span className="stat-label">Completed</span>
+              <div className="stat-icon completed">
+                <CheckCircle2 size={18} />
+              </div>
+            </div>
+            <span className="stat-value">{stats.completedTasks}</span>
+          </div>
 
-        {tasks.length === 0 && <p>No tasks yet</p>}
+          <div className="stat-card">
+            <div className="stat-top">
+              <span className="stat-label">Overdue</span>
+              <div className="stat-icon overdue">
+                <AlertTriangle size={18} />
+              </div>
+            </div>
+            <span className="stat-value">{stats.overdueTasks}</span>
+          </div>
 
-        {tasks.length > 0 && (
-          <table border="1" cellPadding="6">
-            <thead>
-              <tr>
-                <th>Task</th>
-                <th>Employee</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th>Due Date</th>
-                <th>Overdue</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tasks.map((task) => (
-                <tr key={task._id}>
-                  <td>
-                    <Link to={`/tasks/${task._id}`}>{task.title}</Link>
-                  </td>
-                  <td>{task.assignedTo?.name}</td>
-                  <td>{task.priority}</td>
-                  <td>{task.status}</td>
-                  <td>{task.dueDate ? task.dueDate.slice(0, 10) : "-"}</td>
-                  <td>{task.isOverdue ? "Yes" : "No"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+          <div className="stat-card">
+            <div className="stat-top">
+              <span className="stat-label">Next 3 Days</span>
+              <div className="stat-icon upcoming">
+                <Calendar size={18} />
+              </div>
+            </div>
+            <span className="stat-value">{stats.upcomingTasks}</span>
+          </div>
+        </div>
 
-      <button onClick={handleLogout}>Logout</button>
+        {/* Upcoming Deadlines */}
+        <div className="card-section">
+          <div className="card-header">
+            <div className="card-title-group">
+              <Calendar size={18} className="text-muted" />
+              <h2>Upcoming Deadlines (Next 3 Days)</h2>
+            </div>
+          </div>
+
+          {upcomingTasks.length === 0 ? (
+            <div className="empty-state">No upcoming deadlines in the next 3 days</div>
+          ) : (
+            <div className="table-responsive">
+              <table className="modern-table">
+                <thead>
+                  <tr>
+                    <th>Task</th>
+                    <th>Employee</th>
+                    <th>Priority</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {upcomingTasks.map((task) => (
+                    <tr key={task._id}>
+                      <td>
+                        <Link to={`/tasks/${task._id}`} style={{ fontWeight: 600 }}>
+                          {task.title}
+                        </Link>
+                      </td>
+                      <td>{task.assignedTo?.name || "Unassigned"}</td>
+                      <td>{renderPriorityBadge(task.priority)}</td>
+                      <td>{task.dueDate ? task.dueDate.slice(0, 10) : "-"}</td>
+                      <td>{renderStatusBadge(task.status)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Employee Task Overview */}
+        <div className="card-section">
+          <div className="card-header">
+            <div className="card-title-group">
+              <Users size={18} className="text-muted" />
+              <h2>Employee Workload Overview</h2>
+            </div>
+          </div>
+
+          {employees.length === 0 ? (
+            <div className="empty-state">No employees with tasks yet</div>
+          ) : (
+            <div className="table-responsive">
+              <table className="modern-table">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Total Tasks</th>
+                    <th>Pending</th>
+                    <th>In Progress</th>
+                    <th>Completed</th>
+                    <th>Overdue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {employees.map((employee) => (
+                    <tr key={employee.id}>
+                      <td style={{ fontWeight: 600 }}>{employee.employee}</td>
+                      <td>{employee.totalTasks}</td>
+                      <td>{employee.pending}</td>
+                      <td>{employee.inProgress}</td>
+                      <td>{employee.completed}</td>
+                      <td>
+                        {employee.overdue > 0 ? (
+                          <span className="badge badge-overdue">{employee.overdue} Overdue</span>
+                        ) : (
+                          0
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Main Task Tracker */}
+        <div className="card-section">
+          <div className="card-header">
+            <div className="card-title-group">
+              <ListTodo size={18} className="text-muted" />
+              <h2>All Tasks Tracker</h2>
+            </div>
+          </div>
+
+          {tasks.length === 0 ? (
+            <div className="empty-state">No tasks created yet</div>
+          ) : (
+            <div className="table-responsive">
+              <table className="modern-table">
+                <thead>
+                  <tr>
+                    <th>Task Title</th>
+                    <th>Employee</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Due Date</th>
+                    <th>Overdue</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tasks.map((task) => (
+                    <tr key={task._id}>
+                      <td>
+                        <Link to={`/tasks/${task._id}`} style={{ fontWeight: 600 }}>
+                          {task.title}
+                        </Link>
+                      </td>
+                      <td>{task.assignedTo?.name || "Unassigned"}</td>
+                      <td>{renderPriorityBadge(task.priority)}</td>
+                      <td>{renderStatusBadge(task.status)}</td>
+                      <td>{task.dueDate ? task.dueDate.slice(0, 10) : "-"}</td>
+                      <td>
+                        {task.isOverdue ? (
+                          <span className="badge badge-overdue">Yes</span>
+                        ) : (
+                          <span style={{ color: "#94a3b8" }}>No</span>
+                        )}
+                      </td>
+                      <td>
+                        <Link to={`/tasks/${task._id}`} className="btn btn-secondary btn-sm">
+                          <ExternalLink size={12} />
+                          <span>View</span>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 };
