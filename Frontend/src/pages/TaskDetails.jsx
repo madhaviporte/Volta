@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -27,7 +27,7 @@ const TaskDetails = () => {
   const [commentMessage, setCommentMessage] = useState("");
   const [message, setMessage] = useState("");
 
-  const loadTask = () => {
+  const loadTask = useCallback(() => {
     return api
       .get(`/tasks/${taskId}`)
       .then((response) => {
@@ -36,9 +36,9 @@ const TaskDetails = () => {
       .catch((error) => {
         setMessage(error.response?.data?.message || "Could not load task");
       });
-  };
+  }, [taskId]);
 
-  const loadComments = () => {
+  const loadComments = useCallback(() => {
     return api
       .get(`/tasks/${taskId}/comments`)
       .then((response) => {
@@ -47,11 +47,11 @@ const TaskDetails = () => {
       .catch(() => {
         setMessage("Could not load comments");
       });
-  };
+  }, [taskId]);
 
   // Loads the recorded actions for this task
   // (creation, assignment, reassignment, status changes, edits)
-  const loadHistory = () => {
+  const loadHistory = useCallback(() => {
     return api
       .get(`/tasks/${taskId}/history`)
       .then((response) => {
@@ -60,13 +60,15 @@ const TaskDetails = () => {
       .catch(() => {
         setMessage("Could not load history");
       });
-  };
+  }, [taskId]);
 
+  // The loaders are memoized, so this runs once per task id
+  // and never re-fires on unrelated re-renders.
   useEffect(() => {
     loadTask();
     loadComments();
     loadHistory();
-  }, [taskId]);
+  }, [loadTask, loadComments, loadHistory]);
 
   const handleStatusChange = async (e) => {
     try {
