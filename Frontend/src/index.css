@@ -1002,11 +1002,60 @@ a:hover {
 }
 
 @media (max-width: 480px) {
+  /* Navbar reflows to two rows so Logout / bell / nav stay inside the
+     viewport instead of being pushed off-screen (mobile overflow fix). */
+  .header-container {
+    height: auto;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 8px 16px;
+  }
+
+  .brand-group {
+    margin-right: auto;
+  }
+
+  .nav-menu {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .header-actions {
+    gap: 8px;
+  }
+
+  .role-tag {
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .user-pill {
+    padding: 2px;
+    gap: 0;
+  }
+
+  .btn-logout {
+    padding: 8px 10px;
+  }
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
 
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* Page headers and button groups wrap instead of pushing hero buttons
+     past the viewport edge (mobile overflow fix). */
+  .page-header {
+    flex-wrap: wrap;
+  }
+
+  .btn-group {
+    flex-wrap: wrap;
   }
 }

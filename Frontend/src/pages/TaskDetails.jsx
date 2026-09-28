@@ -74,6 +74,10 @@ const TaskDetails = () => {
     try {
       await api.put(`/tasks/${taskId}/status`, { status: e.target.value });
       loadTask();
+      // The backend records a STATUS_CHANGED history entry for this update,
+      // so re-fetch the history too — otherwise the new entry only shows
+      // up after a manual page reload.
+      loadHistory();
     } catch (error) {
       setMessage(error.response?.data?.message || "Could not update status");
     }

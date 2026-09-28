@@ -35,7 +35,11 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/notifications", notificationRoutes);
 
-const PORT = process.env.PORT || 3000;
+// Port must be a usable TCP port. Treat 0/blank/invalid as unset so a
+// stray PORT=0 in the environment can't push the server onto a random port
+// (the frontend expects http://localhost:3000).
+const parsedPort = parseInt(process.env.PORT, 10);
+const PORT = Number.isInteger(parsedPort) && parsedPort > 0 ? parsedPort : 3000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
