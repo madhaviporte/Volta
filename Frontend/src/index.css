@@ -1041,6 +1041,13 @@ a:hover {
     padding: 8px 10px;
   }
 
+  /* Anchor the notification panel to the bell's left edge on mobile so it
+     opens rightward inside the viewport instead of off-screen to the left. */
+  .notif-panel {
+    left: 0;
+    right: auto;
+  }
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
