@@ -13,6 +13,10 @@ const ManagerEmployees = () => {
   const [employees, setEmployees] = useState([]);
   const [message, setMessage] = useState("");
 
+  // Guards against double-clicks firing the same request twice
+  const [creating, setCreating] = useState(false);
+  const [togglingId, setTogglingId] = useState(null);
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -46,6 +50,10 @@ const ManagerEmployees = () => {
   const handleAddEmployee = async (e) => {
     e.preventDefault();
 
+    if (creating) return;
+
+    setCreating(true);
+
     try {
       const response = await api.post("/users", formData);
 
@@ -56,10 +64,17 @@ const ManagerEmployees = () => {
       loadEmployees();
     } catch (error) {
       setMessage(error.response?.data?.message || "Could not create employee");
+    } finally {
+      // Re-enable on success and on failure alike
+      setCreating(false);
     }
   };
 
   const toggleStatus = async (employee) => {
+    if (togglingId) return;
+
+    setTogglingId(employee._id);
+
     try {
       await api.put(`/users/${employee._id}/status`, {
         isActive: !employee.isActive,
@@ -68,6 +83,8 @@ const ManagerEmployees = () => {
       loadEmployees();
     } catch (error) {
       setMessage(error.response?.data?.message || "Could not change status");
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -165,9 +182,9 @@ const ManagerEmployees = () => {
             </div>
 
             <div className="form-actions">
-              <button type="submit" className="btn btn-primary">
+              <button type="submit" className="btn btn-primary" disabled={creating}>
                 <UserPlus size={16} />
-                <span>Create Employee Account</span>
+                <span>{creating ? "Creating..." : "Create Employee Account"}</span>
               </button>
             </div>
           </form>
@@ -218,6 +235,7 @@ const ManagerEmployees = () => {
                             employee.isActive ? "btn-danger" : "btn-secondary"
                           }`}
                           onClick={() => toggleStatus(employee)}
+                          disabled={togglingId !== null}
                         >
                           {employee.isActive ? (
                             <>

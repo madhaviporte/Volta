@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import api from "../services/api";
 import Navbar from "../components/Navbar";
+import MeetingSection from "../components/MeetingSection";
 
 const renderPriorityBadge = (priority) => {
   const p = (priority || "Medium").toLowerCase();
@@ -204,6 +205,9 @@ const ManagerDashboard = () => {
             </div>
           )}
         </div>
+
+        {/* Meeting Updates */}
+        <MeetingSection />
 
         {/* Employee Task Overview */}
         <div className="card-section">

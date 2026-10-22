@@ -9,9 +9,15 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
+
+    // One login request at a time
+    if (submitting) return;
+
+    setSubmitting(true);
 
     try {
       const response = await api.post("/auth/login", {
@@ -34,6 +40,8 @@ const Login = () => {
       setMessage(
         error.response?.data?.message || "Login failed"
       );
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -110,9 +118,10 @@ const Login = () => {
             type="submit"
             className="btn btn-primary"
             style={{ width: "100%", marginTop: "12px" }}
+            disabled={submitting}
           >
             <LogIn size={16} />
-            <span>Login to Portal</span>
+            <span>{submitting ? "Signing in..." : "Login to Portal"}</span>
           </button>
         </form>
       </div>

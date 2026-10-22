@@ -1,9 +1,12 @@
+const mongoose = require("mongoose");
+
 const Task = require("../models/Task");
 const User = require("../models/User");
 const Comment = require("../models/Comment");
 const TaskHistory = require("../models/TaskHistory");
 const Notification = require("../models/Notification");
 const { addDeadlineFlags } = require("../utils/deadline");
+const { isValidId, isText, parseDueDate } = require("../utils/validation");
 
 // Allowed values (must match the Task model enums)
 const VALID_PRIORITIES = ["Low", "Medium", "High", "Urgent"];
@@ -51,6 +54,17 @@ const canAccessTask = (user, task) => {
   return task.assignedTo.toString() === user._id.toString();
 };
 
+// MongoDB transactions need a replica set (MongoDB Atlas qualifies).
+// On a standalone deployment the driver refuses transactions, so the
+// caller falls back to the same deletes run sequentially.
+const isTransactionUnsupported = (error) => {
+  return Boolean(
+    error &&
+      (error.code === 20 ||
+        /Transaction numbers|replica set|standalone/i.test(String(error.message || "")))
+  );
+};
+
 // ---------- Task controllers ----------
 
 // POST /api/tasks  (manager only)
@@ -58,10 +72,17 @@ const createTask = async (req, res) => {
   try {
     const { title, description, assignedTo, priority, status, dueDate } = req.body;
 
-    if (!title || !title.trim()) {
+    if (!isText(title) || !title.trim()) {
       return res.status(400).json({
         success: false,
         message: "Title is required",
+      });
+    }
+
+    if (description !== undefined && description !== null && !isText(description)) {
+      return res.status(400).json({
+        success: false,
+        message: "Description must be text",
       });
     }
 
@@ -72,10 +93,27 @@ const createTask = async (req, res) => {
       });
     }
 
+    // A malformed id would reach findById and throw a CastError (500)
+    if (!isValidId(assignedTo)) {
+      return res.status(400).json({
+        success: false,
+        message: "assignedTo must be an existing employee",
+      });
+    }
+
     if (!dueDate) {
       return res.status(400).json({
         success: false,
         message: "dueDate is required",
+      });
+    }
+
+    const dueDateValue = parseDueDate(dueDate);
+
+    if (!dueDateValue) {
+      return res.status(400).json({
+        success: false,
+        message: "dueDate must be a valid date",
       });
     }
 
@@ -114,7 +152,7 @@ const createTask = async (req, res) => {
       status: taskStatus,
       // If the manager creates the task already completed, set completedAt
       completedAt: taskStatus === "Completed" ? new Date() : null,
-      dueDate: new Date(dueDate),
+      dueDate: dueDateValue,
     });
 
     await recordHistory(task._id, "TASK_CREATED", req.user._id, null, {
@@ -158,6 +196,14 @@ const getTasks = async (req, res) => {
       filter = { assignedTo: req.user._id };
     } else if (req.query.employeeId) {
       // Manager can filter by employee with /api/tasks?employeeId=...
+      // A malformed id would make Task.find throw a CastError (500)
+      if (!isValidId(req.query.employeeId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid employee id",
+        });
+      }
+
       filter = { assignedTo: req.query.employeeId };
     }
 
@@ -186,6 +232,14 @@ const getTasks = async (req, res) => {
 // GET /api/tasks/:id  (both roles)
 const getTaskById = async (req, res) => {
   try {
+    // A malformed id is a client error, not a server error
+    if (!isValidId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid task id",
+      });
+    }
+
     // Load the task without populating first,
     // so the access check can compare the plain assignedTo id
     const task = await Task.findById(req.params.id);
@@ -229,6 +283,72 @@ const updateTask = async (req, res) => {
   try {
     const { title, description, assignedTo, priority, status, dueDate } = req.body;
 
+    // Validate the id and every field before touching the database, so
+    // malformed input answers 400 instead of failing inside mongoose (500)
+    if (!isValidId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid task id",
+      });
+    }
+
+    if (title !== undefined && title !== null && title !== "") {
+      if (!isText(title)) {
+        return res.status(400).json({
+          success: false,
+          message: "Title must be text",
+        });
+      }
+
+      if (!title.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Title is required",
+        });
+      }
+    }
+
+    if (description !== undefined && description !== null && !isText(description)) {
+      return res.status(400).json({
+        success: false,
+        message: "Description must be text",
+      });
+    }
+
+    if (assignedTo && !isValidId(assignedTo)) {
+      return res.status(400).json({
+        success: false,
+        message: "assignedTo must be an existing employee",
+      });
+    }
+
+    if (priority && !VALID_PRIORITIES.includes(priority)) {
+      return res.status(400).json({
+        success: false,
+        message: `Priority must be one of: ${VALID_PRIORITIES.join(", ")}`,
+      });
+    }
+
+    if (status && !VALID_STATUSES.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Status must be one of: ${VALID_STATUSES.join(", ")}`,
+      });
+    }
+
+    let dueDateValue = null;
+
+    if (dueDate) {
+      dueDateValue = parseDueDate(dueDate);
+
+      if (!dueDateValue) {
+        return res.status(400).json({
+          success: false,
+          message: "dueDate must be a valid date",
+        });
+      }
+    }
+
     const task = await Task.findById(req.params.id);
 
     if (!task) {
@@ -250,9 +370,9 @@ const updateTask = async (req, res) => {
 
     // Update only the fields that were sent
     if (title) task.title = title.trim();
-    if (description !== undefined) task.description = description.trim();
+    if (description !== undefined && description !== null) task.description = description.trim();
     if (priority) task.priority = priority;
-    if (dueDate) task.dueDate = new Date(dueDate);
+    if (dueDateValue) task.dueDate = dueDateValue;
 
     // Reassignment: check that the new employee exists
     let oldEmployeeName = null;
@@ -277,16 +397,19 @@ const updateTask = async (req, res) => {
       newEmployeeName = newEmployee.name;
     }
 
-    if (status && !VALID_STATUSES.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: `Status must be one of: ${VALID_STATUSES.join(", ")}`,
-      });
-    }
-
     const statusChanged = status ? applyStatusChange(task, status) : false;
 
     await task.save();
+
+    // Notification cleanup follows the existing design (rows are keyed to
+    // the task and leave with it): after a reassignment the previous
+    // employee must not keep reminders for work they no longer own, and a
+    // completed task must stop showing deadline/overdue reminders. The
+    // scheduler creates fresh rows for the current assignee while the task
+    // is still open and due soon/overdue.
+    if (wasReassigned || (statusChanged && task.status === "Completed")) {
+      await Notification.deleteMany({ task: task._id });
+    }
 
     // Record history entries for what changed
     if (wasReassigned) {
@@ -333,6 +456,13 @@ const updateTaskStatus = async (req, res) => {
   try {
     const { status } = req.body;
 
+    if (!isValidId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid task id",
+      });
+    }
+
     if (!status || !VALID_STATUSES.includes(status)) {
       return res.status(400).json({
         success: false,
@@ -363,6 +493,13 @@ const updateTaskStatus = async (req, res) => {
     if (statusChanged) {
       await task.save();
       await recordHistory(task._id, "STATUS_CHANGED", req.user._id, oldStatus, task.status);
+
+      // Completing a task removes its deadline/overdue reminders so they
+      // cannot mislead; reopening a task lets the scheduler create fresh
+      // ones on its next run.
+      if (task.status === "Completed") {
+        await Notification.deleteMany({ task: task._id });
+      }
     }
 
     const taskWithNames = await Task.findById(task._id)
@@ -387,6 +524,13 @@ const updateTaskStatus = async (req, res) => {
 // DELETE /api/tasks/:id  (manager only)
 const deleteTask = async (req, res) => {
   try {
+    if (!isValidId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid task id",
+      });
+    }
+
     const task = await Task.findById(req.params.id);
 
     if (!task) {
@@ -396,16 +540,39 @@ const deleteTask = async (req, res) => {
       });
     }
 
-    // Record the deletion in the history before removing the task
-    await recordHistory(task._id, "DELETED", req.user._id, { title: task.title }, null);
+    // Everything that belongs to the task leaves with it: the task history
+    // API can only be read while its task exists, so keeping the rows would
+    // only orphan them (the old DELETED entry was itself unreachable the
+    // moment its task disappeared). The task document is removed LAST, so a
+    // failure mid-way leaves the task in place and the delete can simply be
+    // retried. On a replica set (MongoDB Atlas) the whole removal runs in one
+    // transaction; on standalone MongoDB it falls back to sequential deletes.
+    try {
+      const session = await mongoose.startSession();
 
-    // Comments belong to the task, so remove them too
-    await Comment.deleteMany({ task: task._id });
+      try {
+        await session.withTransaction(async () => {
+          await TaskHistory.deleteMany({ task: task._id }).session(session);
+          await Comment.deleteMany({ task: task._id }).session(session);
+          await Notification.deleteMany({ task: task._id }).session(session);
+          await Task.findByIdAndDelete(task._id).session(session);
+        });
+      } finally {
+        await session.endSession();
+      }
+    } catch (error) {
+      // Anything other than the topology limitation is a real failure:
+      // the transaction has already rolled back, so surface it as 500
+      // with the task (and all its data) still intact.
+      if (!isTransactionUnsupported(error)) {
+        throw error;
+      }
 
-    // Reminders of a deleted task are not needed anymore
-    await Notification.deleteMany({ task: task._id });
-
-    await Task.findByIdAndDelete(task._id);
+      await TaskHistory.deleteMany({ task: task._id });
+      await Comment.deleteMany({ task: task._id });
+      await Notification.deleteMany({ task: task._id });
+      await Task.findByIdAndDelete(task._id);
+    }
 
     return res.status(200).json({
       success: true,
@@ -428,10 +595,17 @@ const addComment = async (req, res) => {
   try {
     const { message } = req.body;
 
-    if (!message || !message.trim()) {
+    if (!isText(message) || !message.trim()) {
       return res.status(400).json({
         success: false,
         message: "Comment message is required",
+      });
+    }
+
+    if (!isValidId(req.params.taskId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid task id",
       });
     }
 
@@ -479,6 +653,13 @@ const addComment = async (req, res) => {
 // GET /api/tasks/:taskId/comments  (both roles)
 const getComments = async (req, res) => {
   try {
+    if (!isValidId(req.params.taskId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid task id",
+      });
+    }
+
     const task = await Task.findById(req.params.taskId);
 
     if (!task) {
@@ -520,6 +701,13 @@ const getComments = async (req, res) => {
 // GET /api/tasks/:taskId/history  (both roles)
 const getTaskHistory = async (req, res) => {
   try {
+    if (!isValidId(req.params.taskId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid task id",
+      });
+    }
+
     const task = await Task.findById(req.params.taskId);
 
     if (!task) {

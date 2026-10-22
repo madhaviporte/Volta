@@ -16,6 +16,108 @@ const renderPriorityBadge = (priority) => {
   return <span className={`badge badge-priority-${p}`}>{priority || "Medium"}</span>;
 };
 
+// Human-readable labels for every history action the backend records.
+// Anything not listed here still renders (its raw action name), so an
+// unknown event type can never crash the timeline.
+const HISTORY_LABELS = {
+  TASK_CREATED: "Task created",
+  ASSIGNED: "Assigned",
+  REASSIGNED: "Reassigned",
+  UPDATED: "Task updated",
+  STATUS_CHANGED: "Status changed",
+  DELETED: "Task deleted",
+};
+
+const historyLabel = (action) => {
+  if (typeof action === "string" && Object.prototype.hasOwnProperty.call(HISTORY_LABELS, action)) {
+    return HISTORY_LABELS[action];
+  }
+
+  return typeof action === "string" && action ? action : "Activity";
+};
+
+const isRecord = (value) => value !== null && typeof value === "object";
+
+const formatDateValue = (value) => {
+  if (value === null || value === undefined || value === "") return "-";
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString();
+};
+
+// Builds the detail shown after the actor's name, using only the values
+// the backend stored on that entry. Nothing is invented for old or unknown
+// events, and object payloads are summarised instead of printing
+// "[object Object]".
+const historyDetail = (entry) => {
+  const action = entry ? entry.action : undefined;
+  const oldValue = entry ? entry.oldValue : undefined;
+  const newValue = entry ? entry.newValue : undefined;
+
+  if (action === "STATUS_CHANGED") {
+    return ` (${oldValue || "-"} → ${newValue || "-"})`;
+  }
+
+  if (action === "REASSIGNED") {
+    return ` (${oldValue || "none"} → ${newValue || "-"})`;
+  }
+
+  if (action === "ASSIGNED") {
+    return newValue ? ` to ${newValue}` : "";
+  }
+
+  if (action === "TASK_CREATED") {
+    if (!isRecord(newValue)) return "";
+
+    const parts = [];
+    if (newValue.title) parts.push(`"${newValue.title}"`);
+    if (newValue.assignedTo) parts.push(`assigned to ${newValue.assignedTo}`);
+    if (newValue.priority) parts.push(`priority ${newValue.priority}`);
+    if (newValue.status) parts.push(`status ${newValue.status}`);
+    if (newValue.dueDate) parts.push(`due ${formatDateValue(newValue.dueDate)}`);
+    return parts.length ? ` (${parts.join(", ")})` : "";
+  }
+
+  if (action === "UPDATED") {
+    const before = isRecord(oldValue) ? oldValue : {};
+    const after = isRecord(newValue) ? newValue : {};
+    const parts = [];
+
+    // Only the fields the backend actually records are compared, so the
+    // line lists exactly what changed and nothing else.
+    if (before.title !== after.title && (before.title || after.title)) {
+      parts.push(`title: "${before.title || "-"}" → "${after.title || "-"}"`);
+    }
+    if (before.priority !== after.priority && (before.priority || after.priority)) {
+      parts.push(`priority: ${before.priority || "-"} → ${after.priority || "-"}`);
+    }
+    if (before.dueDate !== after.dueDate) {
+      parts.push(`due date: ${formatDateValue(before.dueDate)} → ${formatDateValue(after.dueDate)}`);
+    }
+    if (before.description !== after.description) {
+      parts.push("description updated");
+    }
+
+    return parts.length ? ` (${parts.join(", ")})` : "";
+  }
+
+  if (action === "DELETED") {
+    // Legacy rows store the removed task's title on oldValue
+    if (isRecord(oldValue) && oldValue.title) return ` ("${oldValue.title}")`;
+    return "";
+  }
+
+  // Unknown action: show scalar values only — never "[object Object]"
+  const parts = [];
+  if (oldValue !== null && oldValue !== undefined && !isRecord(oldValue)) {
+    parts.push(`from ${oldValue}`);
+  }
+  if (newValue !== null && newValue !== undefined && !isRecord(newValue)) {
+    parts.push(`to ${newValue}`);
+  }
+  return parts.length ? ` (${parts.join(", ")})` : "";
+};
+
 const TaskDetails = () => {
   const { taskId } = useParams();
 
@@ -26,6 +128,10 @@ const TaskDetails = () => {
   const [history, setHistory] = useState([]);
   const [commentMessage, setCommentMessage] = useState("");
   const [message, setMessage] = useState("");
+
+  // In-flight guards so repeated clicks can't fire duplicate requests
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [postingComment, setPostingComment] = useState(false);
 
   const loadTask = useCallback(() => {
     return api
@@ -71,8 +177,17 @@ const TaskDetails = () => {
   }, [loadTask, loadComments, loadHistory]);
 
   const handleStatusChange = async (e) => {
+    const newStatus = e.target.value;
+
+    if (updatingStatus) return;
+
+    // A new attempt starts with a clean slate: an error from an earlier
+    // failed attempt must not stay visible while (or after) this one runs.
+    setMessage("");
+    setUpdatingStatus(true);
+
     try {
-      await api.put(`/tasks/${taskId}/status`, { status: e.target.value });
+      await api.put(`/tasks/${taskId}/status`, { status: newStatus });
       loadTask();
       // The backend records a STATUS_CHANGED history entry for this update,
       // so re-fetch the history too — otherwise the new entry only shows
@@ -80,11 +195,20 @@ const TaskDetails = () => {
       loadHistory();
     } catch (error) {
       setMessage(error.response?.data?.message || "Could not update status");
+    } finally {
+      // Success or failure, the select is usable again
+      setUpdatingStatus(false);
     }
   };
 
   const handleAddComment = async (e) => {
     e.preventDefault();
+
+    if (postingComment) return;
+
+    // Clear any stale error before retrying the action
+    setMessage("");
+    setPostingComment(true);
 
     try {
       await api.post(`/tasks/${taskId}/comments`, { message: commentMessage });
@@ -93,6 +217,8 @@ const TaskDetails = () => {
       loadComments();
     } catch (error) {
       setMessage(error.response?.data?.message || "Could not add comment");
+    } finally {
+      setPostingComment(false);
     }
   };
 
@@ -158,6 +284,7 @@ const TaskDetails = () => {
                     className="form-control"
                     value={task.status}
                     onChange={handleStatusChange}
+                    disabled={updatingStatus}
                     style={{ fontWeight: 600 }}
                   >
                     <option>Pending</option>
@@ -227,26 +354,11 @@ const TaskDetails = () => {
                           {new Date(entry.createdAt).toLocaleString()}
                         </span>
                         <div className="timeline-text">
-                          <strong>{entry.action}</strong> by{" "}
+                          <strong>{historyLabel(entry.action)}</strong> by{" "}
                           <span>{entry.performedBy?.name || "User"}</span>
-                          {entry.action === "STATUS_CHANGED" && (
-                            <span style={{ color: "var(--text-muted)" }}>
-                              {" "}
-                              ({entry.oldValue} → {entry.newValue})
-                            </span>
-                          )}
-                          {entry.action === "REASSIGNED" && (
-                            <span style={{ color: "var(--text-muted)" }}>
-                              {" "}
-                              ({entry.oldValue || "none"} → {entry.newValue})
-                            </span>
-                          )}
-                          {entry.action === "ASSIGNED" && (
-                            <span style={{ color: "var(--text-muted)" }}>
-                              {" "}
-                              to {entry.newValue}
-                            </span>
-                          )}
+                          <span style={{ color: "var(--text-muted)" }}>
+                            {historyDetail(entry)}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -296,9 +408,14 @@ const TaskDetails = () => {
                     required
                   ></textarea>
                 </div>
-                <button type="submit" className="btn btn-primary" style={{ width: "100%" }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ width: "100%" }}
+                  disabled={postingComment}
+                >
                   <Send size={14} />
-                  <span>Post Comment</span>
+                  <span>{postingComment ? "Posting..." : "Post Comment"}</span>
                 </button>
               </form>
             </div>

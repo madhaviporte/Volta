@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const Notification = require("../models/Notification");
 const Task = require("../models/Task");
+const { isValidId } = require("../utils/validation");
 const { isTaskOverdue, isTaskDueSoon } = require("../utils/deadline");
 
 // ---------- Generating notifications ----------
@@ -109,6 +110,14 @@ const getMyNotifications = async (req, res) => {
 // to the logged-in user.
 const markNotificationRead = async (req, res) => {
   try {
+    // A malformed id would make findById throw a CastError (500)
+    if (!isValidId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid notification id",
+      });
+    }
+
     const notification = await Notification.findById(req.params.id);
 
     if (!notification) {

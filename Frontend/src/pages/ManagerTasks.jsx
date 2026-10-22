@@ -36,6 +36,11 @@ const ManagerTasks = () => {
     dueDate: "",
   });
 
+  // In-flight guards so a double click can never fire the same request twice
+  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+
   // Edit/reassign: which task is being edited and its form values
   const [editingId, setEditingId] = useState(null);
   const [editFormData, setEditFormData] = useState({
@@ -84,6 +89,11 @@ const ManagerTasks = () => {
   const handleCreateTask = async (e) => {
     e.preventDefault();
 
+    // Ignore repeat submits while the first request is still pending
+    if (creating) return;
+
+    setCreating(true);
+
     try {
       await api.post("/tasks", formData);
 
@@ -93,15 +103,36 @@ const ManagerTasks = () => {
       loadTasks();
     } catch (error) {
       setMessage(error.response?.data?.message || "Could not create task");
+    } finally {
+      // Always re-enable, so a failed request never locks the form
+      setCreating(false);
     }
   };
 
   const handleDeleteTask = async (taskId) => {
+    // A delete is already running: don't queue up another one
+    if (deletingId) return;
+
+    const task = tasks.find((t) => t._id === taskId);
+
+    const confirmed = window.confirm(
+      task
+        ? `Delete "${task.title}" permanently?\n\nIts comments, history and notifications will be removed too. This cannot be undone.`
+        : "Delete this task permanently?\n\nThis cannot be undone."
+    );
+
+    // Cancelled: no delete request is ever sent
+    if (!confirmed) return;
+
+    setDeletingId(taskId);
+
     try {
       await api.delete(`/tasks/${taskId}`);
       loadTasks();
     } catch (error) {
       setMessage(error.response?.data?.message || "Could not delete task");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -130,6 +161,10 @@ const ManagerTasks = () => {
   const handleUpdateTask = async (e) => {
     e.preventDefault();
 
+    if (saving) return;
+
+    setSaving(true);
+
     try {
       await api.put(`/tasks/${editingId}`, editFormData);
 
@@ -139,6 +174,8 @@ const ManagerTasks = () => {
       loadTasks();
     } catch (error) {
       setMessage(error.response?.data?.message || "Could not update task");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -246,9 +283,9 @@ const ManagerTasks = () => {
             </div>
 
             <div className="form-actions">
-              <button type="submit" className="btn btn-primary">
+              <button type="submit" className="btn btn-primary" disabled={creating}>
                 <PlusCircle size={16} />
-                <span>Create Task</span>
+                <span>{creating ? "Creating..." : "Create Task"}</span>
               </button>
             </div>
           </form>
@@ -331,14 +368,15 @@ const ManagerTasks = () => {
               </div>
 
               <div className="form-actions">
-                <button type="submit" className="btn btn-primary">
+                <button type="submit" className="btn btn-primary" disabled={saving}>
                   <CheckCircle2 size={16} />
-                  <span>Save Changes</span>
+                  <span>{saving ? "Saving..." : "Save Changes"}</span>
                 </button>
                 <button
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => setEditingId(null)}
+                  disabled={saving}
                 >
                   <XCircle size={16} />
                   <span>Cancel</span>
@@ -415,10 +453,11 @@ const ManagerTasks = () => {
                             type="button"
                             className="btn btn-danger btn-sm"
                             onClick={() => handleDeleteTask(task._id)}
+                            disabled={deletingId !== null}
                             title="Delete Task"
                           >
                             <Trash2 size={12} />
-                            <span>Delete</span>
+                            <span>{deletingId === task._id ? "Deleting..." : "Delete"}</span>
                           </button>
                         </div>
                       </td>

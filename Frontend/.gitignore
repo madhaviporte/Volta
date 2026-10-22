@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Environment files hold machine/deploy-specific config (e.g. VITE_API_BASE_URL).
+# They are not tracked; see .env.example for the documented variables.
+.env
+.env.production
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

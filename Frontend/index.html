@@ -5,6 +5,22 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>frontend</title>
+    <script>
+      // Apply the saved theme BEFORE the app renders so the page never
+      // flashes the wrong theme on load. Light is the default when the
+      // visitor has not chosen a theme yet (identical to the old look).
+      (function () {
+        var theme = "light";
+        try {
+          if (localStorage.getItem("theme") === "dark") {
+            theme = "dark";
+          }
+        } catch (e) {
+          // localStorage unavailable (private mode) -> stay on light
+        }
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 
 const User = require("../models/User");
+const { isValidId, isText } = require("../utils/validation");
 
 // POST /api/users  (manager only)
 // Managers create employees. There is no public registration.
@@ -8,7 +9,7 @@ const createEmployee = async (req, res) => {
   try {
     const { name, email, password, department, designation } = req.body;
 
-    if (!name || !email || !password) {
+    if (!isText(name) || !isText(email) || !isText(password) || !name.trim() || !email.trim() || !password) {
       return res.status(400).json({
         success: false,
         message: "Name, email and password are required",
@@ -76,6 +77,15 @@ const getUsers = async (req, res) => {
     }
 
     if (req.query.department) {
+      // A non-string filter (e.g. an injected query object) would make
+      // User.find throw a CastError (500)
+      if (!isText(req.query.department)) {
+        return res.status(400).json({
+          success: false,
+          message: "department must be text",
+        });
+      }
+
       filter.department = req.query.department;
     }
 
@@ -99,6 +109,13 @@ const getUsers = async (req, res) => {
 // GET /api/users/:id  (manager only)
 const getUserById = async (req, res) => {
   try {
+    if (!isValidId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user id",
+      });
+    }
+
     const user = await User.findById(req.params.id);
 
     if (!user) {
@@ -126,6 +143,64 @@ const getUserById = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { name, email, password, department, designation } = req.body;
+
+    // Validate the id and field types before touching the database, so
+    // malformed input answers 400 instead of failing inside mongoose (500)
+    if (!isValidId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user id",
+      });
+    }
+
+    if (name && !isText(name)) {
+      return res.status(400).json({
+        success: false,
+        message: "Name must be text",
+      });
+    }
+
+    if (name && isText(name) && !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Name is required",
+      });
+    }
+
+    if (email && !isText(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Email must be text",
+      });
+    }
+
+    if (email && isText(email) && !email.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
+    if (password && !isText(password)) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be text",
+      });
+    }
+
+    if (department !== undefined && department !== null && !isText(department)) {
+      return res.status(400).json({
+        success: false,
+        message: "Department must be text",
+      });
+    }
+
+    if (designation !== undefined && designation !== null && !isText(designation)) {
+      return res.status(400).json({
+        success: false,
+        message: "Designation must be text",
+      });
+    }
 
     const user = await User.findById(req.params.id);
 
@@ -176,6 +251,13 @@ const updateUser = async (req, res) => {
 const updateUserStatus = async (req, res) => {
   try {
     const { isActive } = req.body;
+
+    if (!isValidId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user id",
+      });
+    }
 
     if (typeof isActive !== "boolean") {
       return res.status(400).json({

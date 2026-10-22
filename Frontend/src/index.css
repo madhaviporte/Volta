@@ -30,6 +30,28 @@
   --radius-md: 10px;
   --radius-lg: 16px;
   --radius-full: 9999px;
+
+  /* Component colours that used to be written as literal values. The
+     light-mode defaults below are byte-for-byte the old hard-coded
+     colours, so Light Mode renders exactly as before; the dark theme
+     overrides them (and the palette above) further down. */
+  --primary-solid: #4f46e5; /* filled buttons keep white text */
+  --primary-solid-hover: #4338ca;
+  --chip-bg: #f1f5f9; /* role tag */
+  --subtle-bg: #f8fafc; /* table head, row hover, comment, panel header */
+  --input-bg: #ffffff; /* inputs and inline selects */
+  --alert-error-bg: #fef2f2;
+  --alert-error-border: #fecaca;
+  --alert-error-text: #991b1b;
+  --alert-success-bg: #ecfdf5;
+  --alert-success-border: #a7f3d0;
+  --alert-success-text: #065f46;
+  --danger-border: #fecaca;
+  --danger-hover-bg: #fef2f2;
+  --logout-hover-bg: #fef2f2;
+  --logout-hover-border: #fecaca;
+  --unread-bg: #f0fdf4;
+  --chip-tint-bg: rgba(0, 0, 0, 0.03);
 }
 
 * {
@@ -179,7 +201,7 @@ a:hover {
   align-items: center;
   gap: 4px;
   padding: 4px 10px;
-  background: #f1f5f9;
+  background: var(--chip-bg);
   color: var(--text-muted);
   border-radius: var(--radius-full);
   font-size: 11px;
@@ -229,7 +251,7 @@ a:hover {
   gap: 10px;
   padding: 4px 12px 4px 4px;
   border-radius: var(--radius-full);
-  background: #f8fafc;
+  background: var(--subtle-bg);
   border: 1px solid var(--border-color);
 }
 
@@ -278,8 +300,8 @@ a:hover {
 }
 
 .btn-logout:hover {
-  background: #fef2f2;
-  border-color: #fecaca;
+  background: var(--logout-hover-bg);
+  border-color: var(--logout-hover-border);
   color: var(--accent-rose);
 }
 
@@ -318,15 +340,15 @@ a:hover {
 }
 
 .alert-banner.error {
-  background-color: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
+  background-color: var(--alert-error-bg);
+  border: 1px solid var(--alert-error-border);
+  color: var(--alert-error-text);
 }
 
 .alert-banner.success {
-  background-color: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  color: #065f46;
+  background-color: var(--alert-success-bg);
+  border: 1px solid var(--alert-success-border);
+  color: var(--alert-success-text);
 }
 
 /* ---------- Stat Cards Grid ---------- */
@@ -434,7 +456,7 @@ a:hover {
 }
 
 .modern-table th {
-  background-color: #f8fafc;
+  background-color: var(--subtle-bg);
   color: var(--text-muted);
   font-weight: 600;
   font-size: 12px;
@@ -460,7 +482,7 @@ a:hover {
 }
 
 .modern-table tbody tr:hover {
-  background-color: #f8fafc;
+  background-color: var(--subtle-bg);
 }
 
 .empty-state {
@@ -561,17 +583,27 @@ a:hover {
   transition: all 0.15s ease;
 }
 
+/* While a request is pending the control is disabled — show it clearly */
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-control:disabled {
+  cursor: not-allowed;
+}
+
 .btn-primary {
-  background-color: var(--primary);
+  background-color: var(--primary-solid);
   color: #ffffff;
 }
 
 .btn-primary:hover {
-  background-color: var(--primary-hover);
+  background-color: var(--primary-solid-hover);
 }
 
 .btn-secondary {
-  background-color: #ffffff;
+  background-color: var(--surface);
   border-color: var(--border-color);
   color: var(--text-main);
 }
@@ -581,13 +613,13 @@ a:hover {
 }
 
 .btn-danger {
-  background-color: #ffffff;
-  border-color: #fecaca;
+  background-color: var(--surface);
+  border-color: var(--danger-border);
   color: var(--accent-rose);
 }
 
 .btn-danger:hover {
-  background-color: #fef2f2;
+  background-color: var(--danger-hover-bg);
 }
 
 .btn-sm {
@@ -648,7 +680,7 @@ a:hover {
   font-family: inherit;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  background-color: #ffffff;
+  background-color: var(--input-bg);
   color: var(--text-main);
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -673,7 +705,7 @@ a:hover {
   font-weight: 600;
   border-radius: var(--radius-full);
   border: 1px solid var(--border-color);
-  background-color: #ffffff;
+  background-color: var(--input-bg);
   cursor: pointer;
   outline: none;
 }
@@ -747,7 +779,7 @@ a:hover {
   justify-content: space-between;
   padding: 14px 18px;
   border-bottom: 1px solid var(--border-color);
-  background: #f8fafc;
+  background: var(--subtle-bg);
 }
 
 .notif-panel-header strong {
@@ -780,7 +812,7 @@ a:hover {
 }
 
 .notif-item.unread {
-  background: #f0fdf4;
+  background: var(--unread-bg);
 }
 
 .notif-item.read {
@@ -824,7 +856,7 @@ a:hover {
 .notif-task {
   font-size: 12px;
   color: var(--text-muted);
-  background: rgba(0,0,0,0.03);
+  background: var(--chip-tint-bg);
   padding: 4px 8px;
   border-radius: var(--radius-sm);
   display: inline-block;
@@ -942,7 +974,7 @@ a:hover {
 }
 
 .comment-bubble {
-  background: #f8fafc;
+  background: var(--subtle-bg);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 12px 16px;
@@ -1065,4 +1097,88 @@ a:hover {
   .btn-group {
     flex-wrap: wrap;
   }
+}
+
+/* ---------- Theme Toggle (Dark / Light) ---------- */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--surface-hover);
+  color: var(--text-main);
+}
+
+/* Keyboard users get a clearly visible focus ring */
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ---------- Dark Theme ---------- */
+/* Applied via html[data-theme="dark"] — set before first paint by the
+   inline script in index.html and persisted in localStorage("theme").
+   Only the palette changes: layout, spacing and Light Mode colours are
+   untouched. Pastel badges and stat icons deliberately keep their light
+   chip colours, which stay readable on a dark surface. */
+html[data-theme="dark"] {
+  /* Native inputs, selects, checkboxes and scrollbars go dark too */
+  color-scheme: dark;
+
+  --bg-app: #0b1120;
+  --surface: #111a2e;
+  --surface-hover: #1b2740;
+  --border-color: #263450;
+  --border-focus: #818cf8;
+
+  --text-main: #e5ecf5;
+  --text-muted: #9fb0c6;
+  --text-light: #7c8ea6;
+
+  --primary: #818cf8;
+  --primary-hover: #a5b4fc;
+  --primary-light: #23264f;
+  /* Filled buttons keep the original indigo so white text stays readable */
+  --primary-solid: #4f46e5;
+  --primary-solid-hover: #4338ca;
+
+  --chip-bg: #1b2740;
+  --subtle-bg: #0d1424;
+  --input-bg: #0d1424;
+
+  --alert-error-bg: #2c1218;
+  --alert-error-border: #7f1d1d;
+  --alert-error-text: #fca5a5;
+  --alert-success-bg: #0c2a20;
+  --alert-success-border: #065f46;
+  --alert-success-text: #6ee7b7;
+
+  --danger-border: #9f1239;
+  --danger-hover-bg: #2c1218;
+  --logout-hover-bg: #2c1218;
+  --logout-hover-border: #7f1d1d;
+
+  --unread-bg: #0b2b1f;
+  --chip-tint-bg: rgba(255, 255, 255, 0.06);
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.45), 0 2px 4px -2px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.55), 0 4px 6px -4px rgba(0, 0, 0, 0.55);
+}
+
+/* The input focus ring needs a little more glow on dark surfaces */
+html[data-theme="dark"] .form-control:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.25);
 }

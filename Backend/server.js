@@ -10,6 +10,7 @@ const userRoutes = require("./src/routes/userRoutes");
 const taskRoutes = require("./src/routes/taskRoutes");
 const dashboardRoutes = require("./src/routes/dashboardRoutes");
 const notificationRoutes = require("./src/routes/notificationRoutes");
+const meetingRoutes = require("./src/routes/meetingRoutes");
 const {
   generateDeadlineNotifications,
 } = require("./src/controllers/notificationController");
@@ -75,6 +76,19 @@ app.use(helmet());
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Requests without a JSON content type (or without any body) never reach the
+// body parser, which leaves req.body undefined in Express 5. Normalize it so
+// controllers destructure safely and answer 400 through their existing field
+// validation instead of crashing with a 500. Malformed JSON still fails
+// inside express.json() and is answered by the error middleware as a clean 400.
+app.use((req, res, next) => {
+  if (req.body === undefined) {
+    req.body = {};
+  }
+
+  next();
+});
+
 app.get("/", (req, res) => {
   res.json({
     success: true,
@@ -87,6 +101,31 @@ app.use("/api/users", userRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/meetings", meetingRoutes);
+
+// Anything that fails before a controller answers (a malformed JSON body,
+// or a rejected handler in Express 5) gets the same { success, message }
+// shape as the rest of the API. Bad request bodies answer with their client
+// status; everything else answers a generic 500. Stack traces and database
+// details are logged on the server only, never sent to the client.
+app.use((err, req, res, next) => {
+  if (err.type && err.type.startsWith("entity.")) {
+    return res.status(err.status || 400).json({
+      success: false,
+      message:
+        err.type === "entity.parse.failed"
+          ? "Invalid JSON body"
+          : "Invalid request body",
+    });
+  }
+
+  console.error("Unhandled request error:", err);
+
+  return res.status(500).json({
+    success: false,
+    message: "Something went wrong",
+  });
+});
 
 // Port must be a usable TCP port. Treat 0/blank/invalid as unset so a
 // stray PORT=0 in the environment can't push the server onto a random port

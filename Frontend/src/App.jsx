@@ -2,9 +2,11 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import ManagerEmployees from "./pages/ManagerEmployees";
+import ManagerSettings from "./pages/ManagerSettings";
 import ManagerTasks from "./pages/ManagerTasks";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import TaskDetails from "./pages/TaskDetails";
+import MeetingUpdates from "./pages/MeetingUpdates";
 import ProtectedRoute from "./components/ProtectedRoute";
 import "./index.css";
 
@@ -66,6 +68,26 @@ const App = () => {
           element={
             <ProtectedRoute allowedRole="manager">
               <ManagerTasks />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Manager-only account settings (change own login email/password) */}
+        <Route
+          path="/manager/settings"
+          element={
+            <ProtectedRoute allowedRole="manager">
+              <ManagerSettings />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Both roles can view meetings; the backend scopes what they see */}
+        <Route
+          path="/meetings"
+          element={
+            <ProtectedRoute>
+              <MeetingUpdates />
             </ProtectedRoute>
           }
         />

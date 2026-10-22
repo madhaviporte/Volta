@@ -1,12 +1,17 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
   CheckSquare,
+  CalendarDays,
   LogOut,
   Zap,
   User,
   Shield,
+  Sun,
+  Moon,
+  Settings,
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 
@@ -22,11 +27,33 @@ const Navbar = () => {
     navigate("/login");
   };
 
+  // The theme lives on <html data-theme> (set before first paint by the
+  // inline script in index.html); the toggle just flips it and persists
+  // the choice to localStorage. Declared before any early return so hooks
+  // always run in the same order.
+  const [theme, setTheme] = useState(() =>
+    document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light"
+  );
+
   if (!user) return null;
 
   const isManager = user.role === "manager";
 
   const isActive = (path) => location.pathname === path;
+
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    document.documentElement.setAttribute("data-theme", next);
+
+    try {
+      localStorage.setItem("theme", next);
+    } catch {
+      // Storage unavailable: the theme still applies for this session
+    }
+  };
+
+  const themeLabel = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
 
   return (
     <header className="app-header">
@@ -64,26 +91,59 @@ const Navbar = () => {
                 <span>Tasks</span>
               </Link>
               <Link
+                to="/meetings"
+                className={`nav-item ${isActive("/meetings") ? "active" : ""}`}
+              >
+                <CalendarDays size={16} />
+                <span>Meetings</span>
+              </Link>
+              <Link
                 to="/manager/employees"
                 className={`nav-item ${isActive("/manager/employees") ? "active" : ""}`}
               >
                 <Users size={16} />
                 <span>Employees</span>
               </Link>
+              <Link
+                to="/manager/settings"
+                className={`nav-item ${isActive("/manager/settings") ? "active" : ""}`}
+              >
+                <Settings size={16} />
+                <span>Settings</span>
+              </Link>
             </>
           ) : (
-            <Link
-              to="/employee/dashboard"
-              className={`nav-item ${isActive("/employee/dashboard") ? "active" : ""}`}
-            >
-              <LayoutDashboard size={16} />
-              <span>Dashboard</span>
-            </Link>
+            <>
+              <Link
+                to="/employee/dashboard"
+                className={`nav-item ${isActive("/employee/dashboard") ? "active" : ""}`}
+              >
+                <LayoutDashboard size={16} />
+                <span>Dashboard</span>
+              </Link>
+              <Link
+                to="/meetings"
+                className={`nav-item ${isActive("/meetings") ? "active" : ""}`}
+              >
+                <CalendarDays size={16} />
+                <span>Meetings</span>
+              </Link>
+            </>
           )}
         </nav>
 
         {/* User profile & actions */}
         <div className="header-actions">
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={toggleTheme}
+            aria-label={themeLabel}
+            aria-pressed={theme === "dark"}
+            title={themeLabel}
+          >
+            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
           {!isManager && (
             <div className="notif-wrapper">
               <NotificationBell />

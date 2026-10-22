@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import api from "../services/api";
 import Navbar from "../components/Navbar";
+import MeetingSection from "../components/MeetingSection";
 
 const renderPriorityBadge = (priority) => {
   const p = (priority || "Medium").toLowerCase();
@@ -39,6 +40,9 @@ const EmployeeDashboard = () => {
   const [tasks, setTasks] = useState([]);
   const [error, setError] = useState("");
 
+  // One status update in flight at a time (guards against rapid repeat changes)
+  const [updatingTaskId, setUpdatingTaskId] = useState(null);
+
   // Upcoming and overdue lists are filtered from the same task list
   // the backend already sends. The backend adds the flags:
   // dueSoon = deadline within the next 3 days, isOverdue = past deadline
@@ -63,6 +67,10 @@ const EmployeeDashboard = () => {
   }, []);
 
   const handleStatusChange = async (task, newStatus) => {
+    if (updatingTaskId) return;
+
+    setUpdatingTaskId(task._id);
+
     try {
       await api.put(`/tasks/${task._id}/status`, { status: newStatus });
 
@@ -72,6 +80,8 @@ const EmployeeDashboard = () => {
       setTasks(response.data.data.tasks);
     } catch (error) {
       setError(error.response?.data?.message || "Could not update status");
+    } finally {
+      setUpdatingTaskId(null);
     }
   };
 
@@ -198,6 +208,9 @@ const EmployeeDashboard = () => {
           )}
         </div>
 
+        {/* Meeting Updates */}
+        <MeetingSection />
+
         {/* Overdue Tasks Section */}
         <div className="card-section">
           <div className="card-header">
@@ -276,6 +289,7 @@ const EmployeeDashboard = () => {
                           className="select-status-inline"
                           value={task.status}
                           onChange={(e) => handleStatusChange(task, e.target.value)}
+                          disabled={updatingTaskId !== null}
                         >
                           <option>Pending</option>
                           <option>In Progress</option>
