@@ -8,22 +8,27 @@ import EmployeeDashboard from "./pages/EmployeeDashboard";
 import TaskDetails from "./pages/TaskDetails";
 import MeetingUpdates from "./pages/MeetingUpdates";
 import ProtectedRoute from "./components/ProtectedRoute";
+import {
+  clearSession,
+  getSessionUser,
+  hasValidSession,
+  homePathFor,
+} from "./services/auth";
 import "./index.css";
 
-// Opens the app: logged-in users go to their dashboard,
-// everyone else goes to the login page
+// Opens the app: users with a valid session go to their own dashboard,
+// everyone else (including expired or corrupted sessions) goes to the
+// login page. The session check lives in services/auth.js so the route
+// guard and the login page use the exact same rules.
 const Home = () => {
-  const user = JSON.parse(localStorage.getItem("user") || "null");
-
-  if (user && user.role === "manager") {
-    return <Navigate to="/manager/dashboard" replace />;
+  if (!hasValidSession()) {
+    // Only an unusable session is cleared here; a valid session is
+    // never touched during normal loading or navigation.
+    clearSession();
+    return <Navigate to="/login" replace />;
   }
 
-  if (user) {
-    return <Navigate to="/employee/dashboard" replace />;
-  }
-
-  return <Navigate to="/login" replace />;
+  return <Navigate to={homePathFor(getSessionUser())} replace />;
 };
 
 const App = () => {

@@ -14,16 +14,16 @@ import {
   Settings,
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
+import { clearSession, getSessionUser } from "../services/auth";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const user = JSON.parse(localStorage.getItem("user") || "null");
+  const user = getSessionUser();
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearSession();
     navigate("/login");
   };
 
@@ -144,11 +144,11 @@ const Navbar = () => {
           >
             {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
           </button>
-          {!isManager && (
-            <div className="notif-wrapper">
-              <NotificationBell />
-            </div>
-          )}
+          {/* Both roles get the bell; the backend only ever returns
+              notifications addressed to the logged-in user */}
+          <div className="notif-wrapper">
+            <NotificationBell />
+          </div>
 
           <div className="user-pill">
             <div className="avatar">

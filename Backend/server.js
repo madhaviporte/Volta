@@ -14,6 +14,7 @@ const meetingRoutes = require("./src/routes/meetingRoutes");
 const {
   generateDeadlineNotifications,
 } = require("./src/controllers/notificationController");
+const Notification = require("./src/models/Notification");
 
 // Required configuration must be present or the server refuses to start.
 // Only variable NAMES are printed, never their values.
@@ -137,6 +138,19 @@ const PORT = Number.isInteger(parsedPort) && parsedPort > 0 ? parsedPort : 3000;
 // on failure, so no half-started server is ever left behind.
 const start = async () => {
   await connectDB();
+
+  // Bring the notifications collection's indexes in line with the
+  // schema: creates the per-action dedupeKey uniqueness index and
+  // retires the old compound unique index (duplicate protection now
+  // lives on dedupeKey, which allows repeated activity notifications on
+  // the same task). This only touches index metadata, never documents.
+  // A failure here (e.g. limited database privileges) must not stop the
+  // server: the controllers still check for duplicates before inserting.
+  try {
+    await Notification.syncIndexes();
+  } catch (error) {
+    console.error("Notification index sync failed:", error.message);
+  }
 
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

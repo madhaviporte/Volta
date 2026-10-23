@@ -7,6 +7,12 @@ const { isTaskOverdue, isTaskDueSoon } = require("../utils/deadline");
 
 // ---------- Generating notifications ----------
 
+// Reminder types produced by the deadline scheduler, always addressed to
+// the employee assigned to the task. Used by the task controller too,
+// which removes these rows (and only these) when a task is completed or
+// changes hands, so task activity rows are never lost.
+const DEADLINE_NOTIFICATION_TYPES = ["deadline_soon", "overdue"];
+
 // Creates one notification, but only if the same task does not already
 // have a notification of the same type for the same user.
 // This is what stops duplicate notifications from being created.
@@ -27,10 +33,45 @@ const createNotificationOnce = async (task, type, message) => {
       task: task._id,
       type: type,
       message: message,
+      dedupeKey: `deadline:${task._id}:${task.assignedTo}:${type}`,
     });
   } catch (error) {
     // Code 11000 = duplicate key. This can only happen when two
     // generations run at exactly the same moment, so we ignore it.
+    if (error.code !== 11000) {
+      throw error;
+    }
+  }
+};
+
+// Creates one task-activity notification for one specific recipient.
+// The dedupeKey names the exact action (task + the comment / history
+// entry / assignment it came from), so processing the same action more
+// than once can never produce a second notification. Notifications are
+// only created here as a direct result of a real action - never when a
+// page is loaded or refreshed.
+const createActivityNotification = async ({ user, task, type, message, dedupeKey }) => {
+  // No recipient (e.g. nobody to notify) -> nothing to do
+  if (!user) {
+    return;
+  }
+
+  const existing = await Notification.findOne({ dedupeKey: dedupeKey });
+
+  if (existing) {
+    return; // this exact action was already recorded
+  }
+
+  try {
+    await Notification.create({
+      user: user,
+      task: task._id,
+      type: type,
+      message: message,
+      dedupeKey: dedupeKey,
+    });
+  } catch (error) {
+    // Code 11000 = duplicate key: two identical actions raced; one row is enough
     if (error.code !== 11000) {
       throw error;
     }
@@ -181,4 +222,6 @@ module.exports = {
   markNotificationRead,
   markAllNotificationsRead,
   generateDeadlineNotifications,
+  createActivityNotification,
+  DEADLINE_NOTIFICATION_TYPES,
 };

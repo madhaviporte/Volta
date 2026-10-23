@@ -280,3 +280,84 @@ test("summaries and action items become visible to participants once published",
   assert.equal(visible.summary, "Agreed on the scope.");
   assert.deepEqual(visible.actionItems, ["Draft the plan", "Book the room"]);
 });
+
+test("the meeting link is optional, validated as http(s), and shared with participants", async () => {
+  // Meetings created before the field existed keep working: no link, no errors
+  assert.equal(meeting1.meetingLink, "", "older meetings simply have no link");
+
+  // A valid Google Meet link is stored and returned through the API
+  const created = await api.post("/api/meetings", {
+    token: managerToken,
+    body: {
+      title: "Link sync",
+      date: inDays(5),
+      time: "09:00",
+      agenda: "Join online",
+      participants: [employeeB._id.toString()],
+      meetingLink: "https://meet.google.com/abc-defg-hij",
+    },
+  });
+  assert.equal(created.status, 201);
+  assert.equal(created.body.data.meetingLink, "https://meet.google.com/abc-defg-hij");
+  const linkMeetingId = created.body.data._id;
+
+  // The participating employee sees the same link in their scoped list
+  const listB = await api.get("/api/meetings", { token: tokenB });
+  const seenByB = listB.body.data.find((m) => m._id === linkMeetingId);
+  assert.ok(seenByB, "the participant sees the meeting");
+  assert.equal(seenByB.meetingLink, "https://meet.google.com/abc-defg-hij");
+
+  // Unsafe or malformed links are rejected on create
+  const badLinks = [
+    "javascript:alert(1)",
+    "data:text/html,hello",
+    "ftp://example.com/room",
+    "not a url",
+  ];
+
+  for (const bad of badLinks) {
+    const res = await api.post("/api/meetings", {
+      token: managerToken,
+      body: {
+        title: "Bad link",
+        date: inDays(5),
+        time: "09:00",
+        participants: [employeeA._id.toString()],
+        meetingLink: bad,
+      },
+    });
+    assert.equal(res.status, 400, `expected 400 for meetingLink=${bad}`);
+    assert.equal(res.body.message, "meetingLink must be a valid http(s) URL");
+  }
+
+  // The manager can add a Zoom link to an existing meeting via edit...
+  const added = await api.put(`/api/meetings/${linkMeetingId}`, {
+    token: managerToken,
+    body: { meetingLink: "https://zoom.us/j/123456789" },
+  });
+  assert.equal(added.status, 200);
+  assert.equal(added.body.data.meetingLink, "https://zoom.us/j/123456789");
+
+  // ...but an invalid link on edit is rejected and changes nothing
+  const rejectedEdit = await api.put(`/api/meetings/${linkMeetingId}`, {
+    token: managerToken,
+    body: { meetingLink: "javascript:window.opener.document.body.innerHTML=''" },
+  });
+  assert.equal(rejectedEdit.status, 400);
+  assert.equal(rejectedEdit.body.message, "meetingLink must be a valid http(s) URL");
+
+  // ...and clearing the link (empty string) is allowed
+  const cleared = await api.put(`/api/meetings/${linkMeetingId}`, {
+    token: managerToken,
+    body: { meetingLink: "" },
+  });
+  assert.equal(cleared.status, 200);
+  assert.equal(cleared.body.data.meetingLink, "");
+
+  // Employees still cannot edit meeting links
+  const asEmployee = await api.put(`/api/meetings/${linkMeetingId}`, {
+    token: tokenA,
+    body: { meetingLink: "https://evil.example.com" },
+  });
+  assert.equal(asEmployee.status, 403);
+});

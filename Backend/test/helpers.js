@@ -154,7 +154,14 @@ const connectTestDb = async () => {
 // Removes every document from the test database's collections. This can
 // only ever affect records inside the dedicated test database.
 const resetTestDb = async () => {
-  const collections = ["users", "tasks", "comments", "taskhistories", "notifications"];
+  const collections = [
+    "users",
+    "tasks",
+    "comments",
+    "taskhistories",
+    "notifications",
+    "meetings",
+  ];
 
   for (const name of collections) {
     await mongoose.connection.db.collection(name).deleteMany({});

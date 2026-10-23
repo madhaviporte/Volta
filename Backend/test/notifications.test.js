@@ -136,3 +136,167 @@ test("notification routes require authentication", async () => {
   const res = await api.get("/api/notifications");
   assert.equal(res.status, 401);
 });
+
+// ---------- Task activity notifications (manager + employee routing) ----------
+
+test("task activity notifications reach the correct recipient with actor, title and timestamp", async () => {
+  // The manager assigns a task to A through the real API
+  const created = await api.post("/api/tasks", {
+    token: managerToken,
+    body: {
+      title: "Notify flow",
+      assignedTo: employeeA._id.toString(),
+      dueDate: inDays(2),
+    },
+  });
+  assert.equal(created.status, 201);
+  const taskId = created.body.data._id;
+
+  // The assignee learns about the new task; the message carries the title
+  const listA = await api.get("/api/notifications", { token: tokenA });
+  const assigned = listA.body.data.find(
+    (n) => n.type === "task_assigned" && n.task && n.task._id === taskId
+  );
+  assert.ok(assigned, "the assignee is notified about the new task");
+  assert.match(assigned.message, /Notify flow/);
+  assert.ok(assigned.createdAt, "notifications carry a timestamp");
+
+  // The manager is NOT notified about their own action
+  const managerList = await api.get("/api/notifications", { token: managerToken });
+  assert.ok(
+    !managerList.body.data.some((n) => n.task && n.task._id === taskId),
+    "no self-notification for the assigning manager"
+  );
+
+  // An employee changes the status -> the owning manager is notified
+  const statusRes = await api.put(`/api/tasks/${taskId}/status`, {
+    token: tokenA,
+    body: { status: "In Progress" },
+  });
+  assert.equal(statusRes.status, 200);
+
+  const managerList2 = await api.get("/api/notifications", { token: managerToken });
+  assert.ok(
+    managerList2.body.data.every((n) => n.user === manager._id.toString()),
+    "a manager never receives another user's notifications"
+  );
+  const statusNote = managerList2.body.data.find(
+    (n) => n.type === "task_status_changed" && n.task._id === taskId
+  );
+  assert.ok(statusNote, "the manager hears about the employee's status change");
+  assert.match(statusNote.message, /Notify flow/);
+  assert.match(statusNote.message, /Notif Employee A/); // actor
+
+  // The employee does NOT get the manager-only status notification
+  const listA2 = await api.get("/api/notifications", { token: tokenA });
+  assert.ok(
+    !listA2.body.data.some((n) => n.type === "task_status_changed" && n.task._id === taskId),
+    "employees do not receive manager-only notifications"
+  );
+
+  // An employee comment goes to the manager with a preview of the comment
+  const commentRes = await api.post(`/api/tasks/${taskId}/comments`, {
+    token: tokenA,
+    body: { message: "Started working on it" },
+  });
+  assert.equal(commentRes.status, 201);
+
+  const managerList3 = await api.get("/api/notifications", { token: managerToken });
+  const commentNote = managerList3.body.data.find(
+    (n) => n.type === "task_commented" && n.task._id === taskId
+  );
+  assert.ok(commentNote, "the manager hears about the employee's comment");
+  assert.match(commentNote.message, /Started working on it/);
+  assert.match(commentNote.message, /Notif Employee A/);
+
+  // A no-op status update (status unchanged) creates no new notification
+  const beforeCount = (await api.get("/api/notifications", { token: managerToken })).body.count;
+  const repeat = await api.put(`/api/tasks/${taskId}/status`, {
+    token: tokenA,
+    body: { status: "In Progress" },
+  });
+  assert.equal(repeat.status, 200);
+  const afterCount = (await api.get("/api/notifications", { token: managerToken })).body.count;
+  assert.equal(afterCount, beforeCount, "processing the same status again adds nothing");
+
+  // Completing the task notifies the manager exactly once
+  const completed = await api.put(`/api/tasks/${taskId}/status`, {
+    token: tokenA,
+    body: { status: "Completed" },
+  });
+  assert.equal(completed.status, 200);
+
+  const managerList4 = await api.get("/api/notifications", { token: managerToken });
+  const completedNotes = managerList4.body.data.filter(
+    (n) => n.type === "task_completed" && n.task._id === taskId
+  );
+  assert.equal(completedNotes.length, 1, "exactly one completion notification");
+  assert.match(completedNotes[0].message, /completed the task/);
+  assert.equal(managerList4.body.data.filter((n) => n.type === "task_assigned").length, 0,
+    "the manager never receives assignee-only notifications");
+
+  // Manager notifications use the same read/unread conventions
+  const target = completedNotes[0];
+  assert.equal(target.isRead, false);
+  const readRes = await api.put(`/api/notifications/${target._id}/read`, { token: managerToken });
+  assert.equal(readRes.status, 200);
+
+  const managerList5 = await api.get("/api/notifications", { token: managerToken });
+  const readBack = managerList5.body.data.find((n) => n._id === target._id);
+  assert.equal(readBack.isRead, true);
+
+  // An employee cannot touch the manager's notification
+  const foreign = await api.put(`/api/notifications/${target._id}/read`, { token: tokenA });
+  assert.equal(foreign.status, 403);
+});
+
+test("reassignment notifies the new assignee and clears the previous assignee's rows", async () => {
+  const created = await api.post("/api/tasks", {
+    token: managerToken,
+    body: {
+      title: "Reassign notify",
+      assignedTo: employeeA._id.toString(),
+      dueDate: inDays(4),
+    },
+  });
+  assert.equal(created.status, 201);
+  const taskId = created.body.data._id;
+
+  // Simulate a scheduler reminder for A on this task
+  await models.Notification.create({
+    user: employeeA._id,
+    task: taskId,
+    type: "deadline_soon",
+    message: "Fixture reminder",
+    dedupeKey: `deadline:${taskId}:${employeeA._id}:deadline_soon`,
+  });
+
+  // The manager reassigns the task to B
+  const reassigned = await api.put(`/api/tasks/${taskId}`, {
+    token: managerToken,
+    body: { assignedTo: employeeB._id.toString() },
+  });
+  assert.equal(reassigned.status, 200);
+
+  // A keeps nothing for this task: reminders and activity rows leave with
+  // the reassignment
+  const rowsForA = await models.Notification.find({ task: taskId, user: employeeA._id });
+  assert.equal(rowsForA.length, 0, "the previous assignee keeps nothing");
+
+  // B is told the task is now theirs
+  const listB = await api.get("/api/notifications", { token: tokenB });
+  const reassignedNote = listB.body.data.find(
+    (n) => n.type === "task_reassigned" && n.task && n.task._id === taskId
+  );
+  assert.ok(reassignedNote, "the new assignee is notified");
+  assert.match(reassignedNote.message, /Reassign notify/);
+});
+
+test("refreshing the notification list never generates new notifications", async () => {
+  const first = await api.get("/api/notifications", { token: managerToken });
+  const second = await api.get("/api/notifications", { token: managerToken });
+  const third = await api.get("/api/notifications", { token: managerToken });
+
+  assert.equal(first.body.count, second.body.count);
+  assert.equal(second.body.count, third.body.count);
+});

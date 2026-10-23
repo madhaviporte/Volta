@@ -1,5 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell, CheckCheck, Clock, AlertTriangle, Check, Layers } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import {
+  Bell,
+  CheckCheck,
+  Clock,
+  AlertTriangle,
+  Check,
+  Layers,
+  UserPlus,
+  Repeat,
+  PlayCircle,
+  CheckCircle2,
+  MessageSquare,
+} from "lucide-react";
 import api from "../services/api";
 
 // Formats an ISO date string as DD/MM/YYYY (what the dashboards already use).
@@ -39,14 +52,46 @@ const formatCreatedTime = (value) => {
 const TYPE_LABELS = {
   deadline_soon: "Deadline approaching",
   overdue: "Overdue",
+  task_assigned: "Task assigned",
+  task_reassigned: "Task reassigned",
+  task_status_changed: "Status changed",
+  task_completed: "Task completed",
+  task_commented: "New comment",
 };
 
-// Notification bell + dropdown for the logged-in employee.
+// One icon per notification type; deadline reminders keep the original
+// clock / warning icons, task activity uses the same lucide set as the
+// rest of the app.
+const typeIcon = (type) => {
+  const props = { size: 12, style: { display: "inline", marginRight: "4px" } };
+
+  switch (type) {
+    case "overdue":
+      return <AlertTriangle {...props} />;
+    case "task_assigned":
+      return <UserPlus {...props} />;
+    case "task_reassigned":
+      return <Repeat {...props} />;
+    case "task_status_changed":
+      return <PlayCircle {...props} />;
+    case "task_completed":
+      return <CheckCircle2 {...props} />;
+    case "task_commented":
+      return <MessageSquare {...props} />;
+    default:
+      return <Clock {...props} />;
+  }
+};
+
+// Notification bell + dropdown for the logged-in user (manager or
+// employee; the backend only ever returns rows addressed to them).
 // Uses the existing backend endpoints only:
 //   GET  /api/notifications            (list + unreadCount)
 //   PUT  /api/notifications/:id/read   (mark one as read)
 //   PUT  /api/notifications/read-all   (mark all as read)
 const NotificationBell = () => {
+  const navigate = useNavigate();
+
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -135,6 +180,16 @@ const NotificationBell = () => {
     }
   };
 
+  // A task-related notification opens the task it refers to. Read state
+  // stays explicit (the "Mark as read" button), matching the employee
+  // notification conventions this component already follows.
+  const openTask = (notification) => {
+    if (notification.task && notification.task._id) {
+      setOpen(false);
+      navigate(`/tasks/${notification.task._id}`);
+    }
+  };
+
   return (
     <div className="notif-root" ref={containerRef}>
       <button
@@ -188,15 +243,22 @@ const NotificationBell = () => {
               notifications.map((notification) => (
                 <div
                   key={notification._id}
-                  className={`notif-item${notification.isRead ? " read" : " unread"}`}
+                  className={`notif-item${notification.isRead ? " read" : " unread"}${
+                    notification.task ? " clickable" : ""
+                  }`}
+                  onClick={() => openTask(notification)}
+                  role={notification.task ? "button" : undefined}
+                  tabIndex={notification.task ? 0 : undefined}
+                  onKeyDown={(event) => {
+                    if (notification.task && (event.key === "Enter" || event.key === " ")) {
+                      event.preventDefault();
+                      openTask(notification);
+                    }
+                  }}
                 >
                   <div className="notif-item-top">
                     <span className={`notif-type ${notification.type}`}>
-                      {notification.type === "overdue" ? (
-                        <AlertTriangle size={12} style={{ display: "inline", marginRight: "4px" }} />
-                      ) : (
-                        <Clock size={12} style={{ display: "inline", marginRight: "4px" }} />
-                      )}
+                      {typeIcon(notification.type)}
                       {TYPE_LABELS[notification.type] || notification.type}
                     </span>
                     <span className="notif-time">
@@ -222,7 +284,12 @@ const NotificationBell = () => {
                     <button
                       type="button"
                       className="notif-link"
-                      onClick={() => markAsRead(notification._id)}
+                      onClick={(event) => {
+                        // The item itself opens the task; this button only
+                        // marks the row as read.
+                        event.stopPropagation();
+                        markAsRead(notification._id);
+                      }}
                       style={{ marginTop: "4px", display: "block" }}
                     >
                       <Check size={12} style={{ display: "inline", marginRight: "3px" }} />

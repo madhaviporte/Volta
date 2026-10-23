@@ -5,6 +5,10 @@ const User = require("../models/User");
 const Comment = require("../models/Comment");
 const TaskHistory = require("../models/TaskHistory");
 const Notification = require("../models/Notification");
+const {
+  createActivityNotification,
+  DEADLINE_NOTIFICATION_TYPES,
+} = require("./notificationController");
 const { addDeadlineFlags } = require("../utils/deadline");
 const { isValidId, isText, parseDueDate } = require("../utils/validation");
 
@@ -14,15 +18,21 @@ const VALID_STATUSES = ["Pending", "In Progress", "Completed", "On Hold"];
 
 // ---------- Small helpers used only in this file ----------
 
-// Saves one history entry for a task
+// Saves one history entry for a task and returns it, so callers can use
+// its id to build a per-action dedupe key for notifications.
 const recordHistory = async (taskId, action, performedById, oldValue, newValue) => {
-  await TaskHistory.create({
+  return TaskHistory.create({
     task: taskId,
     action: action,
     performedBy: performedById,
     oldValue: oldValue,
     newValue: newValue,
   });
+};
+
+// Truncates a comment so a notification message stays one readable line.
+const commentPreview = (message) => {
+  return message.length > 120 ? `${message.slice(0, 117)}...` : message;
 };
 
 // Applies the completedAt rules when the status changes.
@@ -165,6 +175,16 @@ const createTask = async (req, res) => {
 
     // The first assignment is also recorded as its own history entry
     await recordHistory(task._id, "ASSIGNED", req.user._id, null, employee.name);
+
+    // The assignee learns that the task is now theirs (the manager who
+    // assigned it already knows, so they are not notified)
+    await createActivityNotification({
+      user: employee._id,
+      task: task,
+      type: "task_assigned",
+      message: `You have been assigned the task "${task.title}" by ${req.user.name}`,
+      dedupeKey: `task_assigned:${task._id}:${employee._id}`,
+    });
 
     const taskWithNames = await Task.findById(task._id)
       .populate("assignedTo", "name")
@@ -402,18 +422,56 @@ const updateTask = async (req, res) => {
     await task.save();
 
     // Notification cleanup follows the existing design (rows are keyed to
-    // the task and leave with it): after a reassignment the previous
-    // employee must not keep reminders for work they no longer own, and a
-    // completed task must stop showing deadline/overdue reminders. The
-    // scheduler creates fresh rows for the current assignee while the task
-    // is still open and due soon/overdue.
-    if (wasReassigned || (statusChanged && task.status === "Completed")) {
-      await Notification.deleteMany({ task: task._id });
+    // the task and leave with it for the person they address): after a
+    // reassignment the previous employee must not keep anything for work
+    // they no longer own, and a completed task must stop showing
+    // deadline/overdue reminders. Rows addressed to anyone else (e.g. the
+    // manager's activity feed) are untouched. The scheduler creates fresh
+    // reminder rows for the current assignee while the task is still open
+    // and due soon/overdue.
+    if (wasReassigned) {
+      await Notification.deleteMany({ task: task._id, user: oldAssignedToId });
+    }
+
+    if (statusChanged && task.status === "Completed") {
+      await Notification.deleteMany({
+        task: task._id,
+        user: task.assignedTo,
+        type: { $in: DEADLINE_NOTIFICATION_TYPES },
+      });
     }
 
     // Record history entries for what changed
     if (wasReassigned) {
-      await recordHistory(task._id, "REASSIGNED", req.user._id, oldEmployeeName, newEmployeeName);
+      const reassignedEntry = await recordHistory(
+        task._id,
+        "REASSIGNED",
+        req.user._id,
+        oldEmployeeName,
+        newEmployeeName
+      );
+
+      // The new assignee learns the task is now theirs
+      await createActivityNotification({
+        user: task.assignedTo,
+        task: task,
+        type: "task_reassigned",
+        message: `Task "${task.title}" has been assigned to you by ${req.user.name}`,
+        dedupeKey: `task_reassigned:${task._id}:${reassignedEntry._id}`,
+      });
+
+      // The manager who owns the task hears about the reassignment,
+      // unless they performed it themselves (no self-notifications).
+      // Only relevant when more than one manager can edit tasks.
+      if (task.createdBy && task.createdBy.toString() !== req.user._id.toString()) {
+        await createActivityNotification({
+          user: task.createdBy,
+          task: task,
+          type: "task_reassigned",
+          message: `${req.user.name} reassigned "${task.title}" from ${oldEmployeeName || "unassigned"} to ${newEmployeeName}`,
+          dedupeKey: `task_reassigned_manager:${task._id}:${reassignedEntry._id}`,
+        });
+      }
     }
 
     if (statusChanged) {
@@ -492,13 +550,49 @@ const updateTaskStatus = async (req, res) => {
 
     if (statusChanged) {
       await task.save();
-      await recordHistory(task._id, "STATUS_CHANGED", req.user._id, oldStatus, task.status);
+      const statusEntry = await recordHistory(
+        task._id,
+        "STATUS_CHANGED",
+        req.user._id,
+        oldStatus,
+        task.status
+      );
 
       // Completing a task removes its deadline/overdue reminders so they
       // cannot mislead; reopening a task lets the scheduler create fresh
-      // ones on its next run.
+      // ones on its next run. Task activity rows (e.g. the manager's
+      // completion notification below) are kept.
       if (task.status === "Completed") {
-        await Notification.deleteMany({ task: task._id });
+        await Notification.deleteMany({
+          task: task._id,
+          user: task.assignedTo,
+          type: { $in: DEADLINE_NOTIFICATION_TYPES },
+        });
+      }
+
+      // The manager who owns the task hears about employee activity on
+      // it: a separate "completed" notification when the task finishes,
+      // a status-change notification otherwise. The manager's own changes
+      // are already known to them, so they are never notified about
+      // themselves.
+      if (task.createdBy && task.createdBy.toString() !== req.user._id.toString()) {
+        if (task.status === "Completed") {
+          await createActivityNotification({
+            user: task.createdBy,
+            task: task,
+            type: "task_completed",
+            message: `${req.user.name} completed the task "${task.title}"`,
+            dedupeKey: `task_completed:${task._id}:${statusEntry._id}`,
+          });
+        } else {
+          await createActivityNotification({
+            user: task.createdBy,
+            task: task,
+            type: "task_status_changed",
+            message: `${req.user.name} changed the status of "${task.title}" from ${oldStatus} to ${task.status}`,
+            dedupeKey: `task_status_changed:${task._id}:${statusEntry._id}`,
+          });
+        }
       }
     }
 
@@ -631,6 +725,28 @@ const addComment = async (req, res) => {
       user: req.user._id,
       message: message.trim(),
     });
+
+    // Keep the other side of the conversation in the loop: a comment
+    // from the assigned employee goes to the task's manager, a comment
+    // from the manager goes to the assigned employee. Self-comments stay
+    // silent. The notification carries the actor, the task title and a
+    // short preview of the comment.
+    const actorId = req.user._id.toString();
+    const assigneeId = task.assignedTo.toString();
+    const creatorId = task.createdBy ? task.createdBy.toString() : "";
+
+    const commentRecipient =
+      actorId === assigneeId ? task.createdBy : actorId === creatorId ? task.assignedTo : null;
+
+    if (commentRecipient) {
+      await createActivityNotification({
+        user: commentRecipient,
+        task: task,
+        type: "task_commented",
+        message: `${req.user.name} commented on "${task.title}": "${commentPreview(comment.message)}"`,
+        dedupeKey: `task_commented:${task._id}:${comment._id}`,
+      });
+    }
 
     // Return the comment with the user's name
     const commentWithUser = await Comment.findById(comment._id).populate("user", "name role");

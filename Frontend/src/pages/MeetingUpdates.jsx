@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   AlertCircle,
   ClipboardList,
+  Video,
 } from "lucide-react";
 import api from "../services/api";
 import Navbar from "../components/Navbar";
@@ -52,8 +53,25 @@ const emptyMeetingForm = () => ({
   date: "",
   time: "",
   agenda: "",
+  meetingLink: "",
   participants: [],
 });
+
+// Only absolute http(s) links are ever rendered as a Join Meeting
+// button. The backend already validates this on save; the check here
+// guards any old or hand-edited data from producing an unsafe anchor.
+const isSafeMeetingLink = (value) => {
+  if (typeof value !== "string" || !value.trim()) {
+    return false;
+  }
+
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
 
 const MeetingUpdates = () => {
   const user = JSON.parse(localStorage.getItem("user") || "null");
@@ -151,6 +169,7 @@ const MeetingUpdates = () => {
       date: fmtDate(meeting.date),
       time: meeting.time,
       agenda: meeting.agenda || "",
+      meetingLink: meeting.meetingLink || "",
       participants: (meeting.participants || []).map((p) => p._id),
     });
   };
@@ -312,6 +331,21 @@ const MeetingUpdates = () => {
               <p style={{ marginTop: "8px", fontSize: "13px", color: "var(--text-main)" }}>
                 <strong>Agenda:</strong> {meeting.agenda}
               </p>
+            )}
+
+            {isSafeMeetingLink(meeting.meetingLink) && (
+              <div style={{ marginTop: "10px" }}>
+                <a
+                  href={meeting.meetingLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary btn-sm"
+                  title="Open the meeting link in a new tab"
+                >
+                  <Video size={12} />
+                  <span>Join Meeting</span>
+                </a>
+              </div>
             )}
 
             <div style={{ fontSize: "13px", color: "var(--text-muted)", marginTop: "6px" }}>
@@ -521,6 +555,18 @@ const MeetingUpdates = () => {
                 </div>
 
                 <div className="form-group" style={{ gridColumn: "span 2" }}>
+                  <label>Meeting Link</label>
+                  <input
+                    type="url"
+                    name="meetingLink"
+                    className="form-control"
+                    placeholder="https://meet.google.com/abc-defg-hij (Google Meet, Zoom, Teams...)"
+                    value={formData.meetingLink}
+                    onChange={(e) => setFormData({ ...formData, meetingLink: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group" style={{ gridColumn: "span 2" }}>
                   <label>Participants *</label>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
                     {employees.map((employee) => (
@@ -616,6 +662,18 @@ const MeetingUpdates = () => {
                     value={editData.agenda}
                     onChange={(e) => setEditData({ ...editData, agenda: e.target.value })}
                   ></textarea>
+                </div>
+
+                <div className="form-group" style={{ gridColumn: "span 2" }}>
+                  <label>Meeting Link</label>
+                  <input
+                    type="url"
+                    name="meetingLink"
+                    className="form-control"
+                    placeholder="https://meet.google.com/abc-defg-hij (Google Meet, Zoom, Teams...)"
+                    value={editData.meetingLink}
+                    onChange={(e) => setEditData({ ...editData, meetingLink: e.target.value })}
+                  />
                 </div>
 
                 <div className="form-group" style={{ gridColumn: "span 2" }}>

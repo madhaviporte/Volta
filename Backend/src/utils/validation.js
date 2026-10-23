@@ -60,4 +60,27 @@ const hasMinLength = (value, min) => {
   return isText(value) && value.length >= min;
 };
 
-module.exports = { isValidId, isText, parseDueDate, isEmail, hasMinLength };
+// A meeting link must be an absolute http(s) URL. Rejecting every other
+// scheme keeps javascript:, data: and friends out of the database and out
+// of the "Join Meeting" anchor the frontend renders.
+const isSafeHttpUrl = (value) => {
+  if (!isText(value)) {
+    return false;
+  }
+
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
+module.exports = {
+  isValidId,
+  isText,
+  parseDueDate,
+  isEmail,
+  hasMinLength,
+  isSafeHttpUrl,
+};

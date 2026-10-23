@@ -1,15 +1,48 @@
 const Meeting = require("../models/Meeting");
 const User = require("../models/User");
-const { isValidId, isText, parseDueDate } = require("../utils/validation");
+const {
+  isValidId,
+  isText,
+  parseDueDate,
+  isSafeHttpUrl,
+} = require("../utils/validation");
 
 // 24-hour start time, e.g. "09:30" or "14:05" (matches the model)
 const TIME_PATTERN = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
+
+// The meeting link is optional. When present (non-empty) it must be an
+// absolute http(s) URL, so only safe Google Meet / Zoom / Teams style
+// links ever reach the database. An empty or missing value means "no
+// link" and is stored as "".
+const normalizeMeetingLink = (value) => {
+  if (!isText(value) || !value.trim()) {
+    return "";
+  }
+
+  return value.trim();
+};
+
+const meetingLinkProblem = (value) => {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (!isText(value)) {
+    return "meetingLink must be a valid http(s) URL";
+  }
+
+  if (value.trim() && !isSafeHttpUrl(value)) {
+    return "meetingLink must be a valid http(s) URL";
+  }
+
+  return null;
+};
 
 // Fields the manager can schedule or edit. Anything else in the body
 // (status, summary, ...) is ignored here so a plain edit can never wipe
 // a published summary or silently un-cancel a meeting.
 const validateDetails = (body) => {
-  const { title, date, time, agenda, participants } = body;
+  const { title, date, time, agenda, participants, meetingLink } = body;
 
   if (title !== undefined) {
     if (!isText(title) || !title.trim()) {
@@ -45,6 +78,12 @@ const validateDetails = (body) => {
     }
   }
 
+  const linkProblem = meetingLinkProblem(meetingLink);
+
+  if (linkProblem) {
+    return linkProblem;
+  }
+
   return null;
 };
 
@@ -72,7 +111,7 @@ const meetingWithNames = async (id) =>
 // POST /api/meetings  (manager only)
 const createMeeting = async (req, res) => {
   try {
-    const { title, date, time, agenda, participants } = req.body;
+    const { title, date, time, agenda, participants, meetingLink } = req.body;
 
     // Creating requires the full set of details
     if (!isText(title) || !title.trim()) {
@@ -121,6 +160,15 @@ const createMeeting = async (req, res) => {
       }
     }
 
+    const linkProblem = meetingLinkProblem(meetingLink);
+
+    if (linkProblem) {
+      return res.status(400).json({
+        success: false,
+        message: linkProblem,
+      });
+    }
+
     const resolved = await resolveParticipants(participants);
 
     if (resolved.error) {
@@ -135,6 +183,7 @@ const createMeeting = async (req, res) => {
       date: dateValue,
       time: time,
       agenda: agenda ? agenda.trim() : "",
+      meetingLink: normalizeMeetingLink(meetingLink),
       participants: resolved.ids,
       createdBy: req.user._id,
     });
@@ -213,12 +262,17 @@ const updateMeeting = async (req, res) => {
       });
     }
 
-    const { title, date, time, agenda, participants } = req.body;
+    const { title, date, time, agenda, participants, meetingLink } = req.body;
 
     if (title !== undefined) meeting.title = title.trim();
     if (date !== undefined) meeting.date = parseDueDate(date);
     if (time !== undefined) meeting.time = time;
     if (agenda !== undefined && agenda !== null) meeting.agenda = agenda.trim();
+    if (meetingLink !== undefined && meetingLink !== null) {
+      // Empty string clears the link; any other value was already
+      // validated as an http(s) URL above.
+      meeting.meetingLink = normalizeMeetingLink(meetingLink);
+    }
 
     if (participants !== undefined) {
       const resolved = await resolveParticipants(participants);

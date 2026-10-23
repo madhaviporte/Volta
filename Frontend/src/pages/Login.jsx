@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Zap, Mail, Lock, LogIn, AlertCircle } from "lucide-react";
-import api from "../services/api";
+import api, { resetSessionExpired } from "../services/api";
+import { getSessionUser, hasValidSession, homePathFor } from "../services/auth";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -10,6 +11,14 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Already logged in (e.g. the browser Back button returned here, or the
+  // URL was opened directly): send the user to their own dashboard instead
+  // of showing the login form again. "replace" keeps the login page out of
+  // the history stack so Back from the dashboard does not land here.
+  if (hasValidSession()) {
+    return <Navigate to={homePathFor(getSessionUser())} replace />;
+  }
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -28,14 +37,17 @@ const Login = () => {
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user", JSON.stringify(response.data.user));
 
+      // A fresh session: any earlier 401 handled for this page session
+      // must not suppress expiry handling for the new token.
+      resetSessionExpired();
+
       setMessage("Login successful");
 
-      // The backend decides the role, and it decides where the user goes
-      if (response.data.user.role === "manager") {
-        navigate("/manager/dashboard");
-      } else {
-        navigate("/employee/dashboard");
-      }
+      // The backend decides the role, and it decides where the user goes.
+      // "replace" swaps the login page out of the history stack, so the
+      // browser Back button returns to whatever came before it (usually
+      // an external page), not to the login form.
+      navigate(homePathFor(response.data.user), { replace: true });
     } catch (error) {
       setMessage(
         error.response?.data?.message || "Login failed"

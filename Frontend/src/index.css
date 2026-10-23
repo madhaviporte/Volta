@@ -819,6 +819,15 @@ a:hover {
   opacity: 0.75;
 }
 
+/* Task-related notifications open the task they refer to */
+.notif-item.clickable {
+  cursor: pointer;
+}
+
+.notif-item.clickable:hover {
+  background: var(--surface-hover);
+}
+
 .notif-item-top {
   display: flex;
   align-items: center;
@@ -840,6 +849,23 @@ a:hover {
 
 .notif-type.overdue {
   color: var(--accent-rose);
+}
+
+.notif-type.task_assigned,
+.notif-type.task_reassigned {
+  color: var(--accent-blue);
+}
+
+.notif-type.task_status_changed {
+  color: var(--accent-purple);
+}
+
+.notif-type.task_completed {
+  color: var(--accent-emerald);
+}
+
+.notif-type.task_commented {
+  color: var(--accent-amber);
 }
 
 .notif-time {

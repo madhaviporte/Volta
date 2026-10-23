@@ -1,4 +1,5 @@
 import axios from "axios";
+import { clearSession } from "./auth";
 
 const api = axios.create({
   // Set by the host at build time (VITE_API_BASE_URL); local dev falls back to port 3000.
@@ -33,8 +34,7 @@ const handleSessionExpired = () => {
   sessionExpiredHandled = true;
 
   // The only two keys this app stores.
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
+  clearSession();
 
   if (window.location.pathname === "/login") {
     return;
@@ -42,6 +42,13 @@ const handleSessionExpired = () => {
 
   // Full page navigation, so no stale in-memory React state survives.
   window.location.replace("/login");
+};
+
+// Called after a successful login, so the next genuine 401 is handled
+// even when this page session already saw one earlier (e.g. an expired
+// token replaced by fresh credentials without a full page reload).
+const resetSessionExpired = () => {
+  sessionExpiredHandled = false;
 };
 
 api.interceptors.response.use(
@@ -64,4 +71,5 @@ api.interceptors.response.use(
   }
 );
 
+export { resetSessionExpired };
 export default api;

@@ -28,6 +28,17 @@ const meetingSchema = new mongoose.Schema(
       default: "",
     },
 
+    // Optional join link (Google Meet, Zoom, Microsoft Teams, ...).
+    // Empty string means "no link"; the controller only ever accepts
+    // absolute http(s) URLs, so the frontend's Join Meeting anchor can
+    // safely open it in a new tab. Meetings created before this field
+    // existed simply have no link and keep working unchanged.
+    meetingLink: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
     // Employees the meeting is relevant to. Employees can only see and
     // read meetings they appear in; only managers can change any of this.
     participants: [

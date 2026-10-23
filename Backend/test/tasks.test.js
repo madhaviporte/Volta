@@ -146,9 +146,18 @@ test("manager can edit and reassign a task; the previous assignee's reminders ar
   assert.equal(res.status, 200);
   assert.equal(res.body.data.assignedTo._id, employeeB._id.toString());
 
-  // Old assignee no longer has reminders for this task
+  // The old assignee keeps nothing for this task (their reminders and
+  // activity rows leave with the reassignment); the only rows left belong
+  // to the new assignee (their "task is now yours" notification).
   const remaining = await models.Notification.find({ task: task._id });
-  assert.equal(remaining.length, 0);
+  assert.ok(
+    remaining.every((n) => n.user.toString() === employeeB._id.toString()),
+    "only the new assignee's notifications remain"
+  );
+  assert.ok(
+    remaining.some((n) => n.type === "task_reassigned"),
+    "the new assignee is told the task is theirs"
+  );
 
   const history = await models.TaskHistory.find({ task: task._id });
   const actions = history.map((h) => h.action);
@@ -180,9 +189,20 @@ test("employee status update works on their own task and completion clears remin
   assert.equal(completed.status, 200);
   assert.ok(completed.body.data.completedAt);
 
-  // Completing removed the reminders (Task 4)
+  // Completing removed the deadline reminders (Task 4). The manager's
+  // activity notifications about the status changes remain: they are
+  // history, not reminders, and must not disappear with completion.
   const remaining = await models.Notification.find({ task: task._id });
-  assert.equal(remaining.length, 0);
+  assert.ok(
+    remaining.every((n) => n.type !== "deadline_soon" && n.type !== "overdue"),
+    "no deadline reminders remain after completion"
+  );
+  assert.ok(
+    remaining.some(
+      (n) => n.type === "task_completed" && n.user.toString() === manager._id.toString()
+    ),
+    "the manager's completion notification remains"
+  );
 
   // Each transition recorded its own STATUS_CHANGED history entry
   const history = await models.TaskHistory.find({ task: task._id, action: "STATUS_CHANGED" }).sort({ createdAt: 1 });
