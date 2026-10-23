@@ -158,11 +158,15 @@ a:hover {
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 24px;
-  height: 64px;
+  /* min-height (not height) + wrap: if a very long user name ever makes
+     the row too wide, the header grows to a second row instead of
+     pushing buttons off-screen and causing horizontal scrolling. */
+  min-height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  flex-wrap: wrap;
+  gap: 12px 16px;
 }
 
 .brand-group {
@@ -213,14 +217,25 @@ a:hover {
 .nav-menu {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
+/* Hamburger button for small screens; the 900px media query below turns
+   it (and the nav) into a mobile dropdown. Hidden on wide screens. */
+.nav-toggle {
+  display: none;
+}
+
+/* Padding/gap tighter than the original 8px 16px: the full tab bar must
+   fit inside the 1280px container alongside the brand and the action
+   buttons, otherwise the header row spills sideways on laptops (the
+   wrap below stays as a failsafe for very long user names).
+   Visually indistinguishable at normal zoom. */
 .nav-item {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  gap: 6px;
+  padding: 8px 12px;
   border-radius: var(--radius-md);
   color: var(--text-muted);
   font-weight: 500;
@@ -242,7 +257,7 @@ a:hover {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .user-pill {
@@ -425,6 +440,8 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   margin-bottom: 18px;
 }
 
@@ -444,12 +461,19 @@ a:hover {
 .table-responsive {
   width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* smooth swipe scrolling on iOS */
+  overscroll-behavior-x: contain; /* swiping the table never scrolls the page */
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
 }
 
+/* Keeps columns readable on phones: inside a .table-responsive wrapper
+   the table scrolls horizontally instead of crushing every column. On
+   wider screens the container is always at least this wide, so the
+   desktop layout is unchanged. */
 .modern-table {
   width: 100%;
+  min-width: 560px;
   border-collapse: collapse;
   text-align: left;
   font-size: 14px;
@@ -660,6 +684,14 @@ a:hover {
   gap: 16px;
 }
 
+/* Fields that stretch across the full form on wider screens (task title,
+   agenda, participants...). The 560px media query below releases them
+   back to one column on phones, where a two-column span would otherwise
+   create an implicit extra column and overflow the viewport. */
+.form-grid .span-2 {
+  grid-column: span 2;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
@@ -868,6 +900,14 @@ a:hover {
   color: var(--accent-amber);
 }
 
+.notif-type.meeting_created {
+  color: var(--accent-emerald);
+}
+
+.notif-type.meeting_updated {
+  color: var(--accent-blue);
+}
+
 .notif-time {
   font-size: 11px;
   color: var(--text-light);
@@ -1019,6 +1059,65 @@ a:hover {
 }
 
 /* ---------- Media Queries for Mobile Responsiveness ---------- */
+@media (max-width: 1279px) {
+  /* The full tab bar needs roughly 1250px of horizontal room (brand +
+     five labelled tabs + theme/bell/profile/logout). Below that it used
+     to squeeze the right-hand buttons off-screen; now it collapses into
+     a hamburger dropdown instead, so laptops and tablets never overflow.
+     The button and the panel are both hidden on wide screens, so large
+     desktops keep the exact current tab-bar look. */
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .nav-toggle:hover {
+    background: var(--surface-hover);
+  }
+
+  /* Full-width dropdown panel hanging below the sticky header */
+  .nav-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    padding: 8px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .nav-menu.open {
+    display: flex;
+  }
+
+  /* Full labels + comfortable 44px touch targets inside the dropdown */
+  .nav-item {
+    justify-content: flex-start;
+    padding: 12px 16px;
+    font-size: 15px;
+    min-height: 44px;
+  }
+
+  .nav-item span {
+    display: inline;
+  }
+}
+
 @media (max-width: 900px) {
   .task-detail-grid {
     grid-template-columns: 1fr;
@@ -1030,16 +1129,15 @@ a:hover {
     padding: 0 16px;
   }
 
-  .nav-menu {
-    gap: 4px;
+  .header-actions {
+    gap: 10px;
   }
 
-  .nav-item span {
-    display: none;
-  }
-
-  .nav-item {
-    padding: 8px 10px;
+  /* Larger hit areas for thumb use */
+  .theme-toggle,
+  .notif-bell {
+    width: 40px;
+    height: 40px;
   }
 
   .user-details {
@@ -1057,11 +1155,60 @@ a:hover {
   .logout-text {
     display: none;
   }
+
+  /* Page headers and button groups wrap instead of pushing hero buttons
+     past the viewport edge (mobile overflow fix). */
+  .page-header {
+    flex-wrap: wrap;
+  }
+
+  .btn-group {
+    flex-wrap: wrap;
+  }
+
+  /* 16px inputs stop iOS Safari from zooming the page when a field is
+     focused, which otherwise makes the layout look clipped/broken. */
+  .form-control {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  /* The role chip needs more room than a phone header has */
+  .role-tag {
+    display: none;
+  }
+
+  /* On phones the panel would hang off either side of the bell, so it
+     becomes a fixed-width sheet just below the header instead. */
+  .notif-panel {
+    position: fixed;
+    top: 72px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+  }
+}
+
+@media (max-width: 560px) {
+  /* Below this width the form grid drops to a single column; fields that
+     span two columns on wider screens must release their extra track,
+     otherwise CSS Grid creates an implicit second column and the form
+     overflows the viewport. */
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid .span-2 {
+    grid-column: auto;
+  }
 }
 
 @media (max-width: 480px) {
-  /* Navbar reflows to two rows so Logout / bell / nav stay inside the
-     viewport instead of being pushed off-screen (mobile overflow fix). */
+  /* The header keeps a wrap-friendly layout as a safety net; the nav
+     links themselves live in the hamburger dropdown, so the old two-row
+     tab reflow is no longer needed. */
   .header-container {
     height: auto;
     flex-wrap: wrap;
@@ -1073,21 +1220,13 @@ a:hover {
     margin-right: auto;
   }
 
-  .nav-menu {
-    order: 3;
-    width: 100%;
-    justify-content: flex-start;
-  }
-
   .header-actions {
-    gap: 8px;
+    gap: 6px;
   }
 
-  .role-tag {
-    max-width: 150px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  /* Logo mark only — the wordmark needs the space for the action icons */
+  .brand-name {
+    display: none;
   }
 
   .user-pill {
@@ -1099,29 +1238,17 @@ a:hover {
     padding: 8px 10px;
   }
 
-  /* Anchor the notification panel to the bell's left edge on mobile so it
-     opens rightward inside the viewport instead of off-screen to the left. */
-  .notif-panel {
-    left: 0;
-    right: auto;
-  }
-
   .stats-grid {
     grid-template-columns: 1fr;
   }
 
-  .form-grid {
-    grid-template-columns: 1fr;
+  /* Login card keeps comfortable margins on the narrowest phones */
+  .login-page-container {
+    padding: 16px;
   }
 
-  /* Page headers and button groups wrap instead of pushing hero buttons
-     past the viewport edge (mobile overflow fix). */
-  .page-header {
-    flex-wrap: wrap;
-  }
-
-  .btn-group {
-    flex-wrap: wrap;
+  .login-card {
+    padding: 28px 20px;
   }
 }
 

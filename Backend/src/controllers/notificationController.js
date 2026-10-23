@@ -44,12 +44,13 @@ const createNotificationOnce = async (task, type, message) => {
   }
 };
 
-// Creates one task-activity notification for one specific recipient.
+// Creates one activity notification for one specific recipient.
 // The dedupeKey names the exact action (task + the comment / history
 // entry / assignment it came from), so processing the same action more
 // than once can never produce a second notification. Notifications are
 // only created here as a direct result of a real action - never when a
-// page is loaded or refreshed.
+// page is loaded or refreshed. "task" is optional: meeting
+// notifications are not tied to a task.
 const createActivityNotification = async ({ user, task, type, message, dedupeKey }) => {
   // No recipient (e.g. nobody to notify) -> nothing to do
   if (!user) {
@@ -65,7 +66,7 @@ const createActivityNotification = async ({ user, task, type, message, dedupeKey
   try {
     await Notification.create({
       user: user,
-      task: task._id,
+      task: task ? task._id : null,
       type: type,
       message: message,
       dedupeKey: dedupeKey,

@@ -1,5 +1,7 @@
+const crypto = require("crypto");
 const Meeting = require("../models/Meeting");
 const User = require("../models/User");
+const { createActivityNotification } = require("./notificationController");
 const {
   isValidId,
   isText,
@@ -108,6 +110,58 @@ const meetingWithNames = async (id) =>
     .populate("participants", "name role")
     .populate("createdBy", "name role");
 
+// ---------- Meeting notifications ----------
+
+// Canonical snapshot of the fields a manager can edit (calendar day is
+// compared in UTC, participants as a sorted id list). Used twice below:
+// to detect whether an update actually changed anything, and as the
+// basis of the idempotency key so a retried PUT with the same payload
+// can never notify participants twice.
+const editableState = (meeting) =>
+  JSON.stringify([
+    meeting.title,
+    meeting.date.getTime(),
+    meeting.time,
+    meeting.agenda,
+    meeting.meetingLink,
+    [...meeting.participants].map(String).sort(),
+  ]);
+
+const stateFingerprint = (state) =>
+  crypto.createHash("sha1").update(state).digest("hex").slice(0, 20);
+
+// Message every participant sees: meeting title plus the useful details
+// (day, time and the join link when one is set).
+const meetingNotificationMessage = (type, meeting) => {
+  const when = `on ${meeting.date.toISOString().slice(0, 10)} at ${meeting.time}`;
+  const link = meeting.meetingLink ? ` — join: ${meeting.meetingLink}` : "";
+
+  return type === "meeting_created"
+    ? `Meeting scheduled: "${meeting.title}" ${when}${link}`
+    : `Meeting updated: "${meeting.title}" is now ${when}${link}`;
+};
+
+// Notifies every participating employee about one real meeting action,
+// through the existing notification pipeline (same dedupeKey mechanism
+// as the task notifications). The acting manager is never notified about
+// their own action. Called only from the POST/PUT handlers below -
+// loading or refreshing the meetings page never creates notifications.
+const notifyMeetingParticipants = async (meeting, { type, dedupeKey, actorId }) => {
+  for (const participantId of meeting.participants) {
+    if (participantId.toString() === actorId.toString()) {
+      continue; // no self-notifications
+    }
+
+    await createActivityNotification({
+      user: participantId,
+      task: null,
+      type: type,
+      message: meetingNotificationMessage(type, meeting),
+      dedupeKey: `${dedupeKey}:${participantId}`,
+    });
+  }
+};
+
 // POST /api/meetings  (manager only)
 const createMeeting = async (req, res) => {
   try {
@@ -188,6 +242,14 @@ const createMeeting = async (req, res) => {
       createdBy: req.user._id,
     });
 
+    // Tell every participant about the new meeting. The meeting id is
+    // unique per creation, so this key makes the notification exactly-once.
+    await notifyMeetingParticipants(meeting, {
+      type: "meeting_created",
+      dedupeKey: `meeting_created:${meeting._id}`,
+      actorId: req.user._id,
+    });
+
     const data = await meetingWithNames(meeting._id);
 
     return res.status(201).json({
@@ -264,6 +326,10 @@ const updateMeeting = async (req, res) => {
 
     const { title, date, time, agenda, participants, meetingLink } = req.body;
 
+    // Snapshot before the mutations so a save that changes nothing
+    // (retry, double click, unchanged form) notifies nobody.
+    const stateBefore = editableState(meeting);
+
     if (title !== undefined) meeting.title = title.trim();
     if (date !== undefined) meeting.date = parseDueDate(date);
     if (time !== undefined) meeting.time = time;
@@ -288,6 +354,18 @@ const updateMeeting = async (req, res) => {
     }
 
     await meeting.save();
+
+    // Only a real change notifies the participants; the fingerprint names
+    // the resulting state, so replaying the same edit stays idempotent.
+    const stateAfter = editableState(meeting);
+
+    if (stateAfter !== stateBefore) {
+      await notifyMeetingParticipants(meeting, {
+        type: "meeting_updated",
+        dedupeKey: `meeting_updated:${meeting._id}:${stateFingerprint(stateAfter)}`,
+        actorId: req.user._id,
+      });
+    }
 
     const data = await meetingWithNames(meeting._id);
 

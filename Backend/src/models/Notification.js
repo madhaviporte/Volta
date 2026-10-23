@@ -12,11 +12,11 @@ const notificationSchema = new mongoose.Schema(
       required: true,
     },
 
-    // The task this notification is about
+    // The task this notification is about. Optional: meeting
+    // notifications (see type below) are not tied to any task.
     task: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Task",
-      required: true,
     },
 
     // Deadline reminders (scheduler -> assigned employee):
@@ -26,8 +26,10 @@ const notificationSchema = new mongoose.Schema(
     //   "task_assigned"     = a task was assigned to the employee
     //   "task_reassigned"   = a task changed hands
     //   "task_status_changed" = someone changed the task status
-    //   "task_completed"    = the task was completed
-    //   "task_commented"    = someone commented on the task
+    //   "task_completed"    = the task was completed    //   "task_commented"   = someone commented on the task
+    // Meeting activity (meeting controller -> participating employees):
+    //   "meeting_created"  = a manager scheduled a new meeting
+    //   "meeting_updated"  = a manager changed the meeting details
     type: {
       type: String,
       enum: [
@@ -38,6 +40,8 @@ const notificationSchema = new mongoose.Schema(
         "task_status_changed",
         "task_completed",
         "task_commented",
+        "meeting_created",
+        "meeting_updated",
       ],
       required: true,
     },

@@ -107,7 +107,12 @@ const App = () => {
           }
         />
 
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        {/* Unknown URLs go through Home, so a logged-in user lands on
+            their own dashboard and only a visitor without a session is
+            sent to the login page. "replace" keeps the broken URL out of
+            the history stack, so Back returns to the real previous page
+            instead of reliving the redirect. */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

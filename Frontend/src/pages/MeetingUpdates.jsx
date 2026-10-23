@@ -506,7 +506,7 @@ const MeetingUpdates = () => {
 
             <form onSubmit={handleCreate}>
               <div className="form-grid">
-                <div className="form-group" style={{ gridColumn: "span 2" }}>
+                <div className="form-group span-2">
                   <label>Meeting Title *</label>
                   <input
                     name="title"
@@ -542,7 +542,7 @@ const MeetingUpdates = () => {
                   />
                 </div>
 
-                <div className="form-group" style={{ gridColumn: "span 2" }}>
+                <div className="form-group span-2">
                   <label>Agenda / Description</label>
                   <textarea
                     name="agenda"
@@ -554,7 +554,7 @@ const MeetingUpdates = () => {
                   ></textarea>
                 </div>
 
-                <div className="form-group" style={{ gridColumn: "span 2" }}>
+                <div className="form-group span-2">
                   <label>Meeting Link</label>
                   <input
                     type="url"
@@ -566,7 +566,7 @@ const MeetingUpdates = () => {
                   />
                 </div>
 
-                <div className="form-group" style={{ gridColumn: "span 2" }}>
+                <div className="form-group span-2">
                   <label>Participants *</label>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
                     {employees.map((employee) => (
@@ -618,7 +618,7 @@ const MeetingUpdates = () => {
 
             <form onSubmit={handleUpdate}>
               <div className="form-grid">
-                <div className="form-group" style={{ gridColumn: "span 2" }}>
+                <div className="form-group span-2">
                   <label>Meeting Title *</label>
                   <input
                     name="title"
@@ -653,7 +653,7 @@ const MeetingUpdates = () => {
                   />
                 </div>
 
-                <div className="form-group" style={{ gridColumn: "span 2" }}>
+                <div className="form-group span-2">
                   <label>Agenda / Description</label>
                   <textarea
                     name="agenda"
@@ -664,7 +664,7 @@ const MeetingUpdates = () => {
                   ></textarea>
                 </div>
 
-                <div className="form-group" style={{ gridColumn: "span 2" }}>
+                <div className="form-group span-2">
                   <label>Meeting Link</label>
                   <input
                     type="url"
@@ -676,7 +676,7 @@ const MeetingUpdates = () => {
                   />
                 </div>
 
-                <div className="form-group" style={{ gridColumn: "span 2" }}>
+                <div className="form-group span-2">
                   <label>Participants *</label>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
                     {employees.map((employee) => (

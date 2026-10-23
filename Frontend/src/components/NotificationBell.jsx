@@ -5,13 +5,14 @@ import {
   CheckCheck,
   Clock,
   AlertTriangle,
-  Check,
   Layers,
   UserPlus,
   Repeat,
   PlayCircle,
   CheckCircle2,
   MessageSquare,
+  CalendarDays,
+  Edit,
 } from "lucide-react";
 import api from "../services/api";
 
@@ -57,6 +58,8 @@ const TYPE_LABELS = {
   task_status_changed: "Status changed",
   task_completed: "Task completed",
   task_commented: "New comment",
+  meeting_created: "Meeting scheduled",
+  meeting_updated: "Meeting updated",
 };
 
 // One icon per notification type; deadline reminders keep the original
@@ -78,6 +81,10 @@ const typeIcon = (type) => {
       return <CheckCircle2 {...props} />;
     case "task_commented":
       return <MessageSquare {...props} />;
+    case "meeting_created":
+      return <CalendarDays {...props} />;
+    case "meeting_updated":
+      return <Edit {...props} />;
     default:
       return <Clock {...props} />;
   }
@@ -99,6 +106,10 @@ const NotificationBell = () => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const containerRef = useRef(null);
+
+  // Ids whose read-request is still in flight, so a double click can
+  // never send the same mark-as-read twice (and decrement twice).
+  const openingRef = useRef(new Set());
 
   // Fetches the real notifications of the logged-in user.
   // All state updates happen inside promise callbacks (never
@@ -155,17 +166,50 @@ const NotificationBell = () => {
     };
   }, [open]);
 
-  const markAsRead = async (notificationId) => {
-    try {
-      await api.put(`/notifications/${notificationId}/read`);
+  // Opening a notification marks it as read in the backend FIRST. The
+  // row only updates locally once that request succeeds, so a failed
+  // request never claims the notification was read. The list renders
+  // unread rows only, so a successfully opened notification disappears
+  // from the dropdown immediately, the badge decrements at the same
+  // moment, and the read state persists server-side across refreshes.
+  const openNotification = async (notification) => {
+    // A request for this row is already running -> ignore the repeat click
+    if (openingRef.current.has(notification._id)) {
+      return;
+    }
+    openingRef.current.add(notification._id);
 
-      // Update the UI immediately from the data we already have.
-      setNotifications((prev) =>
-        prev.map((n) => (n._id === notificationId ? { ...n, isRead: true } : n))
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
+    try {
+      await api.put(`/notifications/${notification._id}/read`);
     } catch {
+      // Backend rejected/failed: keep the row visible and unread so the
+      // user can simply try again.
       setError("Could not mark notification as read");
+      return;
+    } finally {
+      openingRef.current.delete(notification._id);
+    }
+
+    // Accepted -> reflect it right away (no page refresh needed)
+    setNotifications((prev) =>
+      prev.map((n) => (n._id === notification._id ? { ...n, isRead: true } : n))
+    );
+    if (!notification.isRead) {
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    }
+
+    setError("");
+    setOpen(false);
+
+    // Same navigation as before: task rows open their task, meeting rows
+    // open the Meeting Updates page.
+    if (notification.task && notification.task._id) {
+      navigate(`/tasks/${notification.task._id}`);
+    } else if (
+      notification.type === "meeting_created" ||
+      notification.type === "meeting_updated"
+    ) {
+      navigate("/meetings");
     }
   };
 
@@ -180,15 +224,11 @@ const NotificationBell = () => {
     }
   };
 
-  // A task-related notification opens the task it refers to. Read state
-  // stays explicit (the "Mark as read" button), matching the employee
-  // notification conventions this component already follows.
-  const openTask = (notification) => {
-    if (notification.task && notification.task._id) {
-      setOpen(false);
-      navigate(`/tasks/${notification.task._id}`);
-    }
-  };
+
+  // Only unread rows belong in the dropdown: opening one marks it read
+  // (backend first) and it drops out of this list immediately, for both
+  // Manager and Employee accounts.
+  const visible = notifications.filter((notification) => !notification.isRead);
 
   return (
     <div className="notif-root" ref={containerRef}>
@@ -234,25 +274,23 @@ const NotificationBell = () => {
 
             {!loading && error && <p className="notif-state notif-error">{error}</p>}
 
-            {!loading && !error && notifications.length === 0 && (
+            {!loading && !error && visible.length === 0 && (
               <p className="notif-state">No notifications</p>
             )}
 
             {!loading &&
               !error &&
-              notifications.map((notification) => (
+              visible.map((notification) => (
                 <div
                   key={notification._id}
-                  className={`notif-item${notification.isRead ? " read" : " unread"}${
-                    notification.task ? " clickable" : ""
-                  }`}
-                  onClick={() => openTask(notification)}
-                  role={notification.task ? "button" : undefined}
-                  tabIndex={notification.task ? 0 : undefined}
+                  className="notif-item unread clickable"
+                  onClick={() => openNotification(notification)}
+                  role="button"
+                  tabIndex={0}
                   onKeyDown={(event) => {
-                    if (notification.task && (event.key === "Enter" || event.key === " ")) {
+                    if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      openTask(notification);
+                      openNotification(notification);
                     }
                   }}
                 >
@@ -268,34 +306,15 @@ const NotificationBell = () => {
                     </span>
                   </div>
 
-                  <p className="notif-message">{notification.message}</p>
-
-                  {notification.task && (
-                    <p className="notif-task">
-                      <Layers size={11} style={{ display: "inline", marginRight: "4px" }} />
-                      {notification.task.title}
-                      {notification.task.dueDate && (
-                        <span> · due {formatDate(notification.task.dueDate)}</span>
-                      )}
-                    </p>
-                  )}
-
-                  {!notification.isRead && (
-                    <button
-                      type="button"
-                      className="notif-link"
-                      onClick={(event) => {
-                        // The item itself opens the task; this button only
-                        // marks the row as read.
-                        event.stopPropagation();
-                        markAsRead(notification._id);
-                      }}
-                      style={{ marginTop: "4px", display: "block" }}
-                    >
-                      <Check size={12} style={{ display: "inline", marginRight: "3px" }} />
-                      Mark as read
-                    </button>
-                  )}
+                  <p className="notif-message">{notification.message}</p>                    {notification.task && (
+                      <p className="notif-task">
+                        <Layers size={11} style={{ display: "inline", marginRight: "4px" }} />
+                        {notification.task.title}
+                        {notification.task.dueDate && (
+                          <span> · due {formatDate(notification.task.dueDate)}</span>
+                        )}
+                      </p>
+                    )}
                 </div>
               ))}
           </div>

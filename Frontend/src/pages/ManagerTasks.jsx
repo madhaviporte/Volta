@@ -213,7 +213,7 @@ const ManagerTasks = () => {
 
           <form onSubmit={handleCreateTask}>
             <div className="form-grid">
-              <div className="form-group" style={{ gridColumn: "span 2" }}>
+              <div className="form-group span-2">
                 <label>Task Title *</label>
                 <input
                   name="title"
@@ -225,7 +225,7 @@ const ManagerTasks = () => {
                 />
               </div>
 
-              <div className="form-group" style={{ gridColumn: "span 2" }}>
+              <div className="form-group span-2">
                 <label>Description</label>
                 <input
                   name="description"
@@ -301,7 +301,7 @@ const ManagerTasks = () => {
 
             <form onSubmit={handleUpdateTask}>
               <div className="form-grid">
-                <div className="form-group" style={{ gridColumn: "span 2" }}>
+                <div className="form-group span-2">
                   <label>Title *</label>
                   <input
                     name="title"
@@ -312,7 +312,7 @@ const ManagerTasks = () => {
                   />
                 </div>
 
-                <div className="form-group" style={{ gridColumn: "span 2" }}>
+                <div className="form-group span-2">
                   <label>Description</label>
                   <input
                     name="description"
