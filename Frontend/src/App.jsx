@@ -14,7 +14,23 @@ import {
   hasValidSession,
   homePathFor,
 } from "./services/auth";
-import "./index.css";
+// Stylesheets, in cascade order: global.css must come first because it
+// carries the web-font @import, which has to stay at the top of the bundle.
+// Each component/page keeps its own file under src/styles, and shared UI
+// primitives (buttons, forms, cards, tables, badges, stat cards) live in
+// src/styles/shared.
+import "./styles/global.css";
+import "./styles/theme.css";
+import "./styles/shared/Buttons.css";
+import "./styles/shared/Forms.css";
+import "./styles/shared/Cards.css";
+import "./styles/shared/Tables.css";
+import "./styles/shared/Badges.css";
+import "./styles/shared/StatCards.css";
+import "./styles/Navbar.css";
+import "./styles/Login.css";
+import "./styles/NotificationBell.css";
+import "./styles/TaskDetails.css";
 
 // Opens the app: users with a valid session go to their own dashboard,
 // everyone else (including expired or corrupted sessions) goes to the

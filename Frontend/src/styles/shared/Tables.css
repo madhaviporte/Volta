@@ -1,0 +1,53 @@
+/* Tables.css — shared responsive table wrapper and table styling. */
+
+/* ---------- Tables ---------- */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* smooth swipe scrolling on iOS */
+  overscroll-behavior-x: contain; /* swiping the table never scrolls the page */
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+/* Keeps columns readable on phones: inside a .table-responsive wrapper
+   the table scrolls horizontally instead of crushing every column. On
+   wider screens the container is always at least this wide, so the
+   desktop layout is unchanged. */
+.modern-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+
+.modern-table th {
+  background-color: var(--subtle-bg);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modern-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
+  vertical-align: middle;
+}
+
+.modern-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.modern-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.modern-table tbody tr:hover {
+  background-color: var(--subtle-bg);
+}

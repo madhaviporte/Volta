@@ -1,0 +1,329 @@
+/* Navbar.css — sticky header, brand, navigation menu, user pill,
+   logout and theme toggle (src/components/Navbar.jsx). */
+
+/* ---------- Header / Navbar ---------- */
+.app-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-sm);
+}
+
+.header-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
+  /* min-height (not height) + wrap: if a very long user name ever makes
+     the row too wide, the header grows to a second row instead of
+     pushing buttons off-screen and causing horizontal scrolling. */
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+
+.brand-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-icon-box {
+  width: 34px;
+  height: 34px;
+  background: linear-gradient(135deg, var(--primary) 0%, #6366f1 100%);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3);
+}
+
+.brand-name {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--text-main);
+}
+
+.role-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--chip-bg);
+  color: var(--text-muted);
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.nav-menu {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Hamburger button for small screens; the 900px media query below turns
+   it (and the nav) into a mobile dropdown. Hidden on wide screens. */
+.nav-toggle {
+  display: none;
+}
+
+/* Padding/gap tighter than the original 8px 16px: the full tab bar must
+   fit inside the 1280px container alongside the brand and the action
+   buttons, otherwise the header row spills sideways on laptops (the
+   wrap below stays as a failsafe for very long user names).
+   Visually indistinguishable at normal zoom. */
+.nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.15s ease;
+}
+
+.nav-item:hover {
+  color: var(--text-main);
+  background-color: var(--surface-hover);
+}
+
+.nav-item.active {
+  color: var(--primary);
+  background-color: var(--primary-light);
+  font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px 4px 4px;
+  border-radius: var(--radius-full);
+  background: var(--subtle-bg);
+  border: 1px solid var(--border-color);
+}
+
+.user-pill .avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-full);
+  background: var(--primary-light);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.user-role {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.btn-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  color: var(--text-muted);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-logout:hover {
+  background: var(--logout-hover-bg);
+  border-color: var(--logout-hover-border);
+  color: var(--accent-rose);
+}
+
+@media (max-width: 1279px) {
+  /* The full tab bar needs roughly 1250px of horizontal room (brand +
+     five labelled tabs + theme/bell/profile/logout). Below that it used
+     to squeeze the right-hand buttons off-screen; now it collapses into
+     a hamburger dropdown instead, so laptops and tablets never overflow.
+     The button and the panel are both hidden on wide screens, so large
+     desktops keep the exact current tab-bar look. */
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .nav-toggle:hover {
+    background: var(--surface-hover);
+  }
+
+  /* Full-width dropdown panel hanging below the sticky header */
+  .nav-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    padding: 8px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .nav-menu.open {
+    display: flex;
+  }
+
+  /* Full labels + comfortable 44px touch targets inside the dropdown */
+  .nav-item {
+    justify-content: flex-start;
+    padding: 12px 16px;
+    font-size: 15px;
+    min-height: 44px;
+  }
+
+  .nav-item span {
+    display: inline;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-container {
+    padding: 0 16px;
+  }
+
+  .header-actions {
+    gap: 10px;
+  }
+
+  /* Larger hit areas for thumb use */
+  .theme-toggle {
+    width: 40px;
+    height: 40px;
+  }
+
+  .user-details {
+    display: none;
+  }
+
+  .logout-text {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  /* The role chip needs more room than a phone header has */
+  .role-tag {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  /* The header keeps a wrap-friendly layout as a safety net; the nav
+     links themselves live in the hamburger dropdown, so the old two-row
+     tab reflow is no longer needed. */
+  .header-container {
+    height: auto;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 8px 16px;
+  }
+
+  .brand-group {
+    margin-right: auto;
+  }
+
+  .header-actions {
+    gap: 6px;
+  }
+
+  /* Logo mark only — the wordmark needs the space for the action icons */
+  .brand-name {
+    display: none;
+  }
+
+  .user-pill {
+    padding: 2px;
+    gap: 0;
+  }
+
+  .btn-logout {
+    padding: 8px 10px;
+  }
+}
+
+/* ---------- Theme Toggle (Dark / Light) ---------- */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--surface-hover);
+  color: var(--text-main);
+}
+
+/* Keyboard users get a clearly visible focus ring */
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}

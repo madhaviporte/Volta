@@ -1,0 +1,220 @@
+/* NotificationBell.css — bell button, dropdown panel and notification
+   rows (src/components/NotificationBell.jsx). */
+
+/* ---------- Notifications Component ---------- */
+.notif-root {
+  position: relative;
+  display: inline-block;
+}
+
+.notif-bell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.notif-bell:hover {
+  background: var(--surface-hover);
+  color: var(--text-main);
+}
+
+.notif-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  background: var(--accent-rose);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--surface);
+}
+
+.notif-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  text-align: left;
+  overflow: hidden;
+}
+
+.notif-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--subtle-bg);
+}
+
+.notif-panel-header strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.notif-list {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.notif-state {
+  padding: 24px 16px;
+  text-align: center;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.notif-item {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.15s ease;
+}
+
+.notif-item:last-child {
+  border-bottom: none;
+}
+
+.notif-item.unread {
+  background: var(--unread-bg);
+}
+
+.notif-item.read {
+  opacity: 0.75;
+}
+
+/* Task-related notifications open the task they refer to */
+.notif-item.clickable {
+  cursor: pointer;
+}
+
+.notif-item.clickable:hover {
+  background: var(--surface-hover);
+}
+
+.notif-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.notif-type {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.notif-type.deadline_soon {
+  color: var(--accent-amber);
+}
+
+.notif-type.overdue {
+  color: var(--accent-rose);
+}
+
+.notif-type.task_assigned,
+.notif-type.task_reassigned {
+  color: var(--accent-blue);
+}
+
+.notif-type.task_status_changed {
+  color: var(--accent-purple);
+}
+
+.notif-type.task_completed {
+  color: var(--accent-emerald);
+}
+
+.notif-type.task_commented {
+  color: var(--accent-amber);
+}
+
+.notif-type.meeting_created {
+  color: var(--accent-emerald);
+}
+
+.notif-type.meeting_updated {
+  color: var(--accent-blue);
+}
+
+.notif-time {
+  font-size: 11px;
+  color: var(--text-light);
+}
+
+.notif-message {
+  font-size: 13px;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+.notif-task {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--chip-tint-bg);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  margin-bottom: 6px;
+}
+
+.notif-link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notif-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  /* Larger hit areas for thumb use */
+  .notif-bell {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 640px) {
+  /* On phones the panel would hang off either side of the bell, so it
+     becomes a fixed-width sheet just below the header instead. */
+  .notif-panel {
+    position: fixed;
+    top: 72px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+  }
+}

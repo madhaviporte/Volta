@@ -194,7 +194,7 @@ const Navbar = () => {
 
         {/* User profile & actions */}
         <div className="header-actions">
-          {/* Hamburger: only visible on small screens (see index.css) */}
+          {/* Hamburger: only visible on small screens (see styles/Navbar.css) */}
           <button
             type="button"
             className="nav-toggle"

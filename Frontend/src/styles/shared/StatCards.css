@@ -1,0 +1,80 @@
+/* StatCards.css — dashboard stat grid and stat cards, shared by the
+   manager and employee dashboards (src/pages/ManagerDashboard.jsx,
+   src/pages/EmployeeDashboard.jsx). */
+
+/* ---------- Stat Cards Grid ---------- */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.stat-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.stat-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.stat-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-icon.total { background: #e0f2fe; color: #0284c7; }
+
+.stat-icon.pending { background: #fef3c7; color: #d97706; }
+
+.stat-icon.progress { background: #e0e7ff; color: #4f46e5; }
+
+.stat-icon.completed { background: #d1fae5; color: #059669; }
+
+.stat-icon.overdue { background: #ffe4e6; color: #e11d48; }
+
+.stat-icon.upcoming { background: #f3e8ff; color: #7c3aed; }
+
+.stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.1;
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

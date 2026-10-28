@@ -1,0 +1,163 @@
+/* =====================================================================
+   global.css — app-wide foundation
+   Web font import, design tokens (light theme), CSS reset, base
+   typography, app shell layout, page headers and alert banners.
+   Dark-theme token overrides live in theme.css, shared UI primitives in
+   shared/, and every component keeps its own responsive (@media) rules
+   beside the selectors they change.
+   ===================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --bg-app: #f8fafc;
+  --surface: #ffffff;
+  --surface-hover: #f1f5f9;
+  --border-color: #e2e8f0;
+  --border-focus: #818cf8;
+
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-light: #94a3b8;
+
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: #eef2ff;
+
+  --accent-blue: #2563eb;
+  --accent-amber: #d97706;
+  --accent-emerald: #059669;
+  --accent-rose: #e11d48;
+  --accent-purple: #7c3aed;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* Component colours that used to be written as literal values. The
+     light-mode defaults below are byte-for-byte the old hard-coded
+     colours, so Light Mode renders exactly as before; the dark theme
+     overrides them (and the palette above) further down. */
+  --primary-solid: #4f46e5; /* filled buttons keep white text */
+  --primary-solid-hover: #4338ca;
+  --chip-bg: #f1f5f9; /* role tag */
+  --subtle-bg: #f8fafc; /* table head, row hover, comment, panel header */
+  --input-bg: #ffffff; /* inputs and inline selects */
+  --alert-error-bg: #fef2f2;
+  --alert-error-border: #fecaca;
+  --alert-error-text: #991b1b;
+  --alert-success-bg: #ecfdf5;
+  --alert-success-border: #a7f3d0;
+  --alert-success-text: #065f46;
+  --danger-border: #fecaca;
+  --danger-hover-bg: #fef2f2;
+  --logout-hover-bg: #fef2f2;
+  --logout-hover-border: #fecaca;
+  --unread-bg: #f0fdf4;
+  --chip-tint-bg: rgba(0, 0, 0, 0.03);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+a:hover {
+  color: var(--primary-hover);
+}
+
+/* ---------- App Shell Layout ---------- */
+.app-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 28px 24px 48px;
+}
+
+/* ---------- Page Header / Hero Area ---------- */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.page-title-group h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+
+.page-title-group p {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+/* ---------- Alert & Message Banners ---------- */
+.alert-banner {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.alert-banner.error {
+  background-color: var(--alert-error-bg);
+  border: 1px solid var(--alert-error-border);
+  color: var(--alert-error-text);
+}
+
+.alert-banner.success {
+  background-color: var(--alert-success-bg);
+  border: 1px solid var(--alert-success-border);
+  color: var(--alert-success-text);
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    padding: 20px 16px 36px;
+  }
+
+  /* Page headers and button groups wrap instead of pushing hero buttons
+     past the viewport edge (mobile overflow fix). */
+  .page-header {
+    flex-wrap: wrap;
+  }
+}

@@ -1,0 +1,115 @@
+/* Forms.css — shared form cards, grids, fields and inline selects. */
+
+.form-control:disabled {
+  cursor: not-allowed;
+}
+
+/* ---------- Forms ---------- */
+.form-card {
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.form-title {
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 18px;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+/* Fields that stretch across the full form on wider screens (task title,
+   agenda, participants...). The 560px media query below releases them
+   back to one column on phones, where a two-column span would otherwise
+   create an implicit extra column and overflow the viewport. */
+.form-grid .span-2 {
+  grid-column: span 2;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.form-control {
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background-color: var(--input-bg);
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-control:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+/* Select Control Custom Pill */
+.select-status-inline {
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background-color: var(--input-bg);
+  cursor: pointer;
+  outline: none;
+}
+
+.select-status-inline:focus {
+  border-color: var(--primary);
+}
+
+@media (max-width: 768px) {
+  /* 16px inputs stop iOS Safari from zooming the page when a field is
+     focused, which otherwise makes the layout look clipped/broken. */
+  .form-control {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 560px) {
+  /* Below this width the form grid drops to a single column; fields that
+     span two columns on wider screens must release their extra track,
+     otherwise CSS Grid creates an implicit second column and the form
+     overflows the viewport. */
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid .span-2 {
+    grid-column: auto;
+  }
+}

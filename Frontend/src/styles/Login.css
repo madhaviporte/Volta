@@ -1,0 +1,61 @@
+/* Login.css — centred login card and hero background (src/pages/Login.jsx). */
+
+/* Centered Layout for Login */
+.login-page-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+  padding: 24px;
+}
+
+.login-card {
+  background: var(--surface);
+  width: 100%;
+  max-width: 420px;
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.login-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+}
+
+.login-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+
+.login-header p {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+@media (max-width: 480px) {
+  /* Login card keeps comfortable margins on the narrowest phones */
+  .login-page-container {
+    padding: 16px;
+  }
+
+  .login-card {
+    padding: 28px 20px;
+  }
+}

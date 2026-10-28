@@ -1,0 +1,63 @@
+/* =====================================================================
+   theme.css — dark / light theming
+   Light-mode values are the :root tokens in global.css; this file holds
+   the html[data-theme="dark"] overrides applied by the inline script in
+   index.html (persisted in localStorage("theme")). Only the palette
+   changes here — layout and spacing are untouched.
+   ===================================================================== */
+
+/* Applied via html[data-theme="dark"] — set before first paint by the
+   inline script in index.html and persisted in localStorage("theme").
+   Only the palette changes: layout, spacing and Light Mode colours are
+   untouched. Pastel badges and stat icons deliberately keep their light
+   chip colours, which stay readable on a dark surface. */
+html[data-theme="dark"] {
+  /* Native inputs, selects, checkboxes and scrollbars go dark too */
+  color-scheme: dark;
+
+  --bg-app: #0b1120;
+  --surface: #111a2e;
+  --surface-hover: #1b2740;
+  --border-color: #263450;
+  --border-focus: #818cf8;
+
+  --text-main: #e5ecf5;
+  --text-muted: #9fb0c6;
+  --text-light: #7c8ea6;
+
+  --primary: #818cf8;
+  --primary-hover: #a5b4fc;
+  --primary-light: #23264f;
+  /* Filled buttons keep the original indigo so white text stays readable */
+  --primary-solid: #4f46e5;
+  --primary-solid-hover: #4338ca;
+
+  --chip-bg: #1b2740;
+  --subtle-bg: #0d1424;
+  --input-bg: #0d1424;
+
+  --alert-error-bg: #2c1218;
+  --alert-error-border: #7f1d1d;
+  --alert-error-text: #fca5a5;
+  --alert-success-bg: #0c2a20;
+  --alert-success-border: #065f46;
+  --alert-success-text: #6ee7b7;
+
+  --danger-border: #9f1239;
+  --danger-hover-bg: #2c1218;
+  --logout-hover-bg: #2c1218;
+  --logout-hover-border: #7f1d1d;
+
+  --unread-bg: #0b2b1f;
+  --chip-tint-bg: rgba(255, 255, 255, 0.06);
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.45), 0 2px 4px -2px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.55), 0 4px 6px -4px rgba(0, 0, 0, 0.55);
+}
+
+/* The input focus ring needs a little more glow on dark surfaces */
+html[data-theme="dark"] .form-control:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.25);
+}

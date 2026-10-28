@@ -1,0 +1,77 @@
+/* Badges.css — shared priority / status / account badges and pills. */
+
+/* ---------- Badges & Status Pills ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Priority Badges */
+.badge-priority-urgent {
+  background: #ffe4e6;
+  color: #9f1239;
+  border: 1px solid #fecdd3;
+}
+
+.badge-priority-high {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.badge-priority-medium {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.badge-priority-low {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+/* Status Badges */
+.badge-status-pending {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.badge-status-in-progress {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.badge-status-completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge-status-on-hold {
+  background: #f3e8ff;
+  color: #6b21a8;
+}
+
+/* Account Status */
+.badge-active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge-inactive {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* Overdue Pill */
+.badge-overdue {
+  background: #ffe4e6;
+  color: #e11d48;
+  font-weight: 600;
+}
