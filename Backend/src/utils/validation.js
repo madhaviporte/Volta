@@ -55,6 +55,13 @@ const isEmail = (value) => {
   return domain.includes(".") && !domain.startsWith(".") && !domain.endsWith(".");
 };
 
+// Roles the User schema allows. User management accepts only these two
+// values, so a malformed role is answered with a 400 instead of reaching
+// mongoose (which would answer 500 through the enum validator).
+const isValidRole = (value) => {
+  return value === "manager" || value === "employee";
+};
+
 // A trimmed string of at least `min` characters (passwords, names, ...).
 const hasMinLength = (value, min) => {
   return isText(value) && value.length >= min;
@@ -81,6 +88,7 @@ module.exports = {
   isText,
   parseDueDate,
   isEmail,
+  isValidRole,
   hasMinLength,
   isSafeHttpUrl,
 };

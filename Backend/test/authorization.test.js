@@ -58,9 +58,12 @@ test("all manager-only endpoints reject an employee with 403", async () => {
 
   const probes = [
     ["post", "/api/users", { token, body: { name: "X", email: "x@volta.test", password: "secret123" } }],
+    ["post", "/api/users", { token, body: { name: "Y", email: "y@volta.test", password: "secret123", role: "manager" } }],
     ["get", "/api/users", { token }],
     ["get", `/api/users/${manager._id}`, { token }],
     ["put", `/api/users/${otherEmployee._id}`, { token, body: { name: "Hacked" } }],
+    ["put", `/api/users/${otherEmployee._id}`, { token, body: { role: "manager" } }],
+    ["put", `/api/users/${manager._id}`, { token, body: { role: "manager" } }],
     ["put", `/api/users/${otherEmployee._id}/status`, { token, body: { isActive: false } }],
     ["post", "/api/tasks", { token, body: { title: "Nope", assignedTo: otherEmployee._id.toString(), dueDate: inDays(3) } }],
     ["put", `/api/tasks/${someTaskId}`, { token, body: { title: "Hacked" } }],
@@ -107,9 +110,9 @@ test("the employee dashboard only ever uses the token's own user", async () => {
 });
 
 test("an employee cannot smuggle a manager role through create/update payloads", async () => {
-  // POST /api/users ignores any role field -> created account is an employee
+  // POST /api/users is manager-only, so the role field never even runs
   const created = await api.post("/api/users", {
-    token: managerToken,
+    token: employeeToken(),
     body: {
       name: "Role Smuggle",
       email: `smuggle-${Date.now()}@volta.test`,
@@ -118,18 +121,18 @@ test("an employee cannot smuggle a manager role through create/update payloads",
       isActive: true,
     },
   });
-  assert.equal(created.status, 201);
-  assert.equal(created.body.data.role, "employee");
+  assert.equal(created.status, 403);
 
-  // PUT /api/users/:id ignores a role field -> role unchanged
-  const updated = await api.put(`/api/users/${created.body.data.id}`, {
-    token: managerToken,
+  // PUT /api/users/:id is manager-only too: an employee cannot promote
+  // themselves or anybody else (creating managers is covered by
+  // test/user-management.test.js and is a manager-only operation)
+  const updated = await api.put(`/api/users/${otherEmployee._id}`, {
+    token: employeeToken(),
     body: { role: "manager", name: "Role Smuggle Renamed" },
   });
-  assert.equal(updated.status, 200);
-  assert.equal(updated.body.data.role, "employee");
+  assert.equal(updated.status, 403);
 
-  const reloaded = await models.User.findById(created.body.data.id);
+  const reloaded = await models.User.findById(otherEmployee._id);
   assert.equal(reloaded.role, "employee");
 });
 

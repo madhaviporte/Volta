@@ -69,6 +69,19 @@
   color: #64748b;
 }
 
+/* Account Role (user directory) */
+.badge-role-manager {
+  background: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #c7d2fe;
+}
+
+.badge-role-employee {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
 /* Overdue Pill */
 .badge-overdue {
   background: #ffe4e6;
