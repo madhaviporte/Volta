@@ -1,29 +1,39 @@
-/* Navbar.css — sticky header, brand, navigation menu, user pill,
-   logout and theme toggle (src/components/Navbar.jsx). */
+/* Navbar.css — left navigation sidebar, top bar (brand, theme toggle,
+   notifications, profile, logout) and their mobile dropdown
+   (src/components/Navbar.jsx). */
 
-/* ---------- Header / Navbar ---------- */
-.app-header {
+/* ---------- Top Bar ---------- */
+.app-topbar {
   background: var(--surface);
   border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
   z-index: 100;
   box-shadow: var(--shadow-sm);
-}
-
-.header-container {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 24px;
-  /* min-height (not height) + wrap: if a very long user name ever makes
-     the row too wide, the header grows to a second row instead of
-     pushing buttons off-screen and causing horizontal scrolling. */
   min-height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
   gap: 12px 16px;
+  padding: 0 24px;
+}
+
+/* ---------- Sidebar ---------- */
+/* Same background as the page (as in the reference) so only the border
+   separates it from the content; sticky + full height keeps the nav and
+   the profile reachable while the page scrolls. */
+.app-sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 14px;
+  background: var(--bg-app);
+  border-right: 1px solid var(--border-color);
+  overflow-y: auto;
 }
 
 .brand-group {
@@ -73,30 +83,28 @@
 
 .nav-menu {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  margin-top: 8px;
 }
 
-/* Hamburger button for small screens; the 900px media query below turns
-   it (and the nav) into a mobile dropdown. Hidden on wide screens. */
+/* Hamburger button for small screens; the media query below turns the
+   sidebar into a dropdown that it opens. Hidden on wide screens. */
 .nav-toggle {
   display: none;
 }
 
-/* Padding/gap tighter than the original 8px 16px: the full tab bar must
-   fit inside the 1280px container alongside the brand and the action
-   buttons, otherwise the header row spills sideways on laptops (the
-   wrap below stays as a failsafe for very long user names).
-   Visually indistinguishable at normal zoom. */
 .nav-item {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
+  gap: 10px;
+  padding: 10px 12px;
   border-radius: var(--radius-md);
   color: var(--text-muted);
   font-weight: 500;
   font-size: 14px;
+  min-height: 42px;
   transition: all 0.15s ease;
 }
 
@@ -105,10 +113,18 @@
   background-color: var(--surface-hover);
 }
 
+/* Active item is a solid indigo pill with white text (as in the
+   reference); --primary-solid keeps the same value in both themes, so
+   the contrast is identical in light and dark mode. */
 .nav-item.active {
-  color: var(--primary);
-  background-color: var(--primary-light);
+  color: #ffffff;
+  background-color: var(--primary-solid);
   font-weight: 600;
+}
+
+.nav-item.active:hover {
+  color: #ffffff;
+  background-color: var(--primary-solid-hover);
 }
 
 .header-actions {
@@ -177,13 +193,109 @@
   color: var(--accent-rose);
 }
 
-@media (max-width: 1279px) {
-  /* The full tab bar needs roughly 1250px of horizontal room (brand +
-     five labelled tabs + theme/bell/profile/logout). Below that it used
-     to squeeze the right-hand buttons off-screen; now it collapses into
-     a hamburger dropdown instead, so laptops and tablets never overflow.
-     The button and the panel are both hidden on wide screens, so large
-     desktops keep the exact current tab-bar look. */
+/* ---------- Three-dot logout menu (compact screens) ---------- */
+/* The single logout button lives in this menu below 1024px: the ⋮
+   toggle sits in the topbar actions row and the panel drops down from
+   it. `right: 0` anchors the panel to the toggle and grows it leftwards,
+   so it can never run past the right edge of a phone screen. */
+.logout-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.logout-menu-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.logout-menu-toggle:hover {
+  background: var(--surface-hover);
+  color: var(--text-main);
+}
+
+.logout-menu-toggle:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Hidden until the ⋮ button is pressed (the "open" class is toggled in
+   Navbar.jsx, which also closes it on outside click and Escape) */
+.logout-menu-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 148px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 120;
+}
+
+.logout-menu-panel.open {
+  display: block;
+}
+
+.logout-menu-panel .btn-logout {
+  width: 100%;
+}
+
+/* ---------- Desktop (≥1024px): logout at the sidebar bottom-left ---------- */
+/* Same single button, repositioned by CSS: the ⋮ toggle disappears and
+   the panel is pinned with `position: fixed` to the sidebar's own
+   padding box — left 14px / bottom 20px / width 232px - 28px — so it
+   sits below every navigation link and lines up with the nav items.
+   The sidebar reserves room for it with the extra bottom padding. */
+@media (min-width: 1024px) {
+  .app-sidebar {
+    padding-bottom: 76px;
+  }
+
+  /* Removes the wrapper from the topbar's flex row, so it leaves no
+     stray gap behind when its children are out of flow */
+  .logout-menu {
+    display: contents;
+  }
+
+  .logout-menu-toggle {
+    display: none;
+  }
+
+  .logout-menu-panel {
+    display: block;
+    position: fixed;
+    top: auto;
+    right: auto;
+    bottom: 20px;
+    left: 14px;
+    width: calc(232px - 28px);
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    z-index: 101;
+  }
+}
+
+@media (max-width: 1023px) {
+  /* The sidebar needs roughly 1050px of horizontal room next to the
+     content column. Below that it collapses into a dropdown panel
+     hanging below the sticky top bar, opened by the hamburger button —
+     the same menuOpen state, outside-click and Escape handling the app
+     always used, just anchored to the sidebar instead of the header. */
   .nav-toggle {
     display: inline-flex;
     align-items: center;
@@ -203,41 +315,41 @@
     background: var(--surface-hover);
   }
 
-  /* Full-width dropdown panel hanging below the sticky header */
-  .nav-menu {
-    display: none;
-    position: absolute;
-    top: 100%;
+  /* Full-width dropdown panel hanging below the sticky top bar */
+  .app-sidebar {
+    position: fixed;
+    top: 64px;
     left: 0;
     right: 0;
+    height: auto;
+    max-height: calc(100vh - 64px);
+    z-index: 99;
+    display: none;
     flex-direction: column;
     align-items: stretch;
-    gap: 2px;
-    padding: 8px;
+    gap: 4px;
+    padding: 12px;
     background: var(--surface);
+    border-right: none;
     border-bottom: 1px solid var(--border-color);
     box-shadow: var(--shadow-lg);
+    overflow-y: auto;
   }
 
-  .nav-menu.open {
+  .app-sidebar.open {
     display: flex;
   }
 
   /* Full labels + comfortable 44px touch targets inside the dropdown */
   .nav-item {
-    justify-content: flex-start;
     padding: 12px 16px;
     font-size: 15px;
-    min-height: 44px;
-  }
-
-  .nav-item span {
-    display: inline;
+    min-height: 46px;
   }
 }
 
 @media (max-width: 768px) {
-  .header-container {
+  .app-topbar {
     padding: 0 16px;
   }
 
@@ -246,16 +358,13 @@
   }
 
   /* Larger hit areas for thumb use */
-  .theme-toggle {
+  .theme-toggle,
+  .logout-menu-toggle {
     width: 40px;
     height: 40px;
   }
 
   .user-details {
-    display: none;
-  }
-
-  .logout-text {
     display: none;
   }
 }
@@ -268,14 +377,14 @@
 }
 
 @media (max-width: 480px) {
-  /* The header keeps a wrap-friendly layout as a safety net; the nav
-     links themselves live in the hamburger dropdown, so the old two-row
-     tab reflow is no longer needed. */
-  .header-container {
-    height: auto;
-    flex-wrap: wrap;
-    gap: 6px 12px;
-    padding: 8px 16px;
+  /* Tighter top bar: the nav links live in the sidebar dropdown, so the
+     bar only has to hold the logo mark and the action icons. */
+  /* min-height stays at 64px on purpose: the collapsed sidebar is
+     anchored to top: 64px below the fixed top bar (see the 1024px
+     media query), so both must agree at every width. */
+  .app-topbar {
+    gap: 8px;
+    padding: 0 12px;
   }
 
   .brand-group {

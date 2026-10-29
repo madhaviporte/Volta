@@ -90,18 +90,51 @@ a:hover {
 }
 
 /* ---------- App Shell Layout ---------- */
+/* Two-column shell matching the reference: a sticky navigation sidebar
+   on the left and, on the right, the top bar (brand, notifications,
+   profile) above the page content. Navbar renders both shell elements
+   as a fragment, so the areas are assigned here next to the template —
+   the sidebar spans both rows, the top bar and the page fill the rest.
+   minmax(0, ...) keeps wide tables inside their own scrolling wrapper
+   instead of stretching the grid column. */
 .app-layout {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    "sidebar topbar"
+    "sidebar main";
+}
+
+.app-sidebar {
+  grid-area: sidebar;
+}
+
+.app-topbar {
+  grid-area: topbar;
 }
 
 .main-content {
-  flex: 1;
+  grid-area: main;
+  min-width: 0;
   max-width: 1280px;
   width: 100%;
   margin: 0 auto;
   padding: 28px 24px 48px;
+}
+
+/* Below 1024px the sidebar collapses (Navbar.css turns it into the
+   dropdown opened by the hamburger) and the shell becomes one column.
+   1024px itself is still the desktop layout, matching the app's
+   "desktop = 1024px and above" rule. */
+@media (max-width: 1023px) {
+  .app-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "topbar"
+      "main";
+  }
 }
 
 /* ---------- Page Header / Hero Area ---------- */

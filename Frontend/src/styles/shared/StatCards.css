@@ -1,11 +1,15 @@
 /* StatCards.css — dashboard stat grid and stat cards, shared by the
    manager and employee dashboards (src/pages/ManagerDashboard.jsx,
-   src/pages/EmployeeDashboard.jsx). */
+   src/pages/EmployeeDashboard.jsx). Compact card treatment from the
+   reference: small icon box, label, large value. */
 
 /* ---------- Stat Cards Grid ---------- */
+/* minmax(150px) lets all six manager stats sit in one row on a laptop
+   next to the sidebar, then wraps to two columns on tablets and one on
+   phones (media queries below). */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 16px;
   margin-bottom: 28px;
 }
@@ -14,7 +18,7 @@
   background: var(--surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 18px 20px;
+  padding: 16px;
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
@@ -61,7 +65,7 @@
 .stat-icon.upcoming { background: #f3e8ff; color: #7c3aed; }
 
 .stat-value {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--text-main);
   line-height: 1.1;

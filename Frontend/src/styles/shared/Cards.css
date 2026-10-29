@@ -1,4 +1,6 @@
-/* Cards.css — shared card containers, card headers and empty states. */
+/* Cards.css — shared card containers, card headers, empty states and the
+   dashboard layout helpers (welcome banner + section columns) shared by
+   ManagerDashboard.jsx and EmployeeDashboard.jsx. */
 
 /* ---------- Card Containers ---------- */
 .card-section {
@@ -36,4 +38,64 @@
   text-align: center;
   color: var(--text-muted);
   font-size: 14px;
+}
+
+/* ---------- Dashboard Welcome Banner ---------- */
+/* Greeting/headline block at the top of both dashboards. The typography
+   comes from .page-title-group (global.css); this only adds the panel
+   treatment and the small eyebrow line above the heading. */
+.welcome-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--primary-solid);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.welcome-banner .banner-eyebrow {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.welcome-banner .page-title-group p:last-child {
+  max-width: 62ch;
+}
+
+/* ---------- Dashboard Section Grid ---------- */
+/* The dashboard pages add this class to .main-content: the sections
+   then flow into two equal columns (as in the reference) with no extra
+   wrapper elements, and full-width sections opt out with .dash-wide
+   (welcome banner, alerts and stat rows are always full width). Cards
+   give up their bottom margin inside the grid because the gap handles
+   the spacing. */
+.main-content.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-content: start;
+}
+
+.dashboard-grid > * {
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.dashboard-grid > .welcome-banner,
+.dashboard-grid > .alert-banner,
+.dashboard-grid > .stats-grid,
+.dashboard-grid > .dash-wide {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1023px) {
+  .main-content.dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

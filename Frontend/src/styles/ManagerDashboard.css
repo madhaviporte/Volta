@@ -1,0 +1,101 @@
+/* ManagerDashboard.css — styles used only by src/pages/ManagerDashboard.jsx.
+   Everything shared with the employee dashboard (welcome banner, section
+   columns, stat cards, tables, badges) stays in src/styles/shared. */
+
+/* ---------- Team Progress Card ---------- */
+/* Row with the completion ring on the left and the status legend on the
+   right; wraps to a stacked layout when the column gets narrow. */
+.team-progress-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.progress-ring-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* CSS-only donut: a conic gradient driven by the --progress custom
+   property (0-100) set inline from the real task counts. The inner disc
+   is drawn with ::before so no image or extra element is needed. */
+.progress-ring {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: conic-gradient(
+    var(--accent-emerald) calc(var(--progress, 0) * 1%),
+    var(--surface-hover) 0
+  );
+  flex-shrink: 0;
+}
+
+.progress-ring::before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+}
+
+.progress-ring-value {
+  position: relative;
+  z-index: 1;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.progress-ring-caption {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.progress-legend {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 180px;
+}
+
+.progress-legend li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.progress-legend strong {
+  margin-left: auto;
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.legend-dot.completed {
+  background: var(--accent-emerald);
+}
+
+.legend-dot.in-progress {
+  background: var(--accent-blue);
+}
+
+.legend-dot.pending {
+  background: var(--accent-amber);
+}

@@ -10,10 +10,13 @@ import {
   Users,
   AlertCircle,
   ExternalLink,
+  BarChart3,
+  ChevronRight,
 } from "lucide-react";
 import api from "../services/api";
 import Navbar from "../components/Navbar";
 import MeetingSection from "../components/MeetingSection";
+import "../styles/ManagerDashboard.css";
 
 const renderPriorityBadge = (priority) => {
   const p = (priority || "Medium").toLowerCase();
@@ -71,15 +74,27 @@ const ManagerDashboard = () => {
     loadStats();
   }, []);
 
+  // Overall completion shown by the Team Progress ring, computed from the
+  // real statistics (never hard-coded): 0% while the data is loading or
+  // when there are no tasks at all.
+  const completionPct =
+    stats.totalTasks > 0
+      ? Math.round((stats.completedTasks / stats.totalTasks) * 100)
+      : 0;
+
   return (
     <div className="app-layout">
       <Navbar />
 
-      <main className="main-content">
-        <div className="page-header">
+      <main className="main-content dashboard-grid">
+        {/* Welcome banner (greeting + primary actions) */}
+        <div className="welcome-banner">
           <div className="page-title-group">
+            <p className="banner-eyebrow">
+              Welcome back, {user ? user.name : "Manager"}
+            </p>
             <h1>Manager Dashboard</h1>
-            <p>Welcome back, {user ? user.name : "Manager"}. Overview of team performance & deadlines.</p>
+            <p>Here's what's happening with your team today — progress, tasks and deadlines at a glance.</p>
           </div>
           <div className="btn-group">
             <Link to="/manager/tasks" className="btn btn-primary">
@@ -160,6 +175,54 @@ const ManagerDashboard = () => {
               </div>
             </div>
             <span className="stat-value">{stats.upcomingTasks}</span>
+          </div>
+        </div>
+
+        {/* Team Progress — completion ring + status legend (real counts) */}
+        <div className="card-section">
+          <div className="card-header">
+            <div className="card-title-group">
+              <BarChart3 size={18} className="text-muted" />
+              <h2>Team Progress</h2>
+            </div>
+            <Link
+              to="/manager/tasks"
+              className="btn btn-secondary btn-sm"
+              title="Open task management"
+            >
+              <span>View details</span>
+              <ChevronRight size={12} />
+            </Link>
+          </div>
+
+          <div className="team-progress-body">
+            <div className="progress-ring-wrap">
+              <div
+                className="progress-ring"
+                style={{ "--progress": String(completionPct) }}
+              >
+                <span className="progress-ring-value">{completionPct}%</span>
+              </div>
+              <span className="progress-ring-caption">Overall completion</span>
+            </div>
+
+            <ul className="progress-legend">
+              <li>
+                <span className="legend-dot completed" />
+                Completed
+                <strong>{stats.completedTasks}</strong>
+              </li>
+              <li>
+                <span className="legend-dot in-progress" />
+                In Progress
+                <strong>{stats.inProgressTasks}</strong>
+              </li>
+              <li>
+                <span className="legend-dot pending" />
+                Pending
+                <strong>{stats.pendingTasks}</strong>
+              </li>
+            </ul>
           </div>
         </div>
 
@@ -256,8 +319,8 @@ const ManagerDashboard = () => {
           )}
         </div>
 
-        {/* Main Task Tracker */}
-        <div className="card-section">
+        {/* Main Task Tracker (spans both columns) */}
+        <div className="card-section dash-wide">
           <div className="card-header">
             <div className="card-title-group">
               <ListTodo size={18} className="text-muted" />

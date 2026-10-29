@@ -89,11 +89,15 @@ const EmployeeDashboard = () => {
     <div className="app-layout">
       <Navbar />
 
-      <main className="main-content">
-        <div className="page-header">
+      <main className="main-content dashboard-grid">
+        {/* Welcome banner (greeting) */}
+        <div className="welcome-banner">
           <div className="page-title-group">
+            <p className="banner-eyebrow">
+              Welcome back, {user ? user.name : "Employee"}
+            </p>
             <h1>Employee Dashboard</h1>
-            <p>Welcome back, {user ? user.name : "Employee"}. Manage your workload and update task progress.</p>
+            <p>Focus on what matters most today — your assigned work, progress and deadlines.</p>
           </div>
         </div>
 
@@ -211,8 +215,8 @@ const EmployeeDashboard = () => {
         {/* Meeting Updates */}
         <MeetingSection />
 
-        {/* Overdue Tasks Section */}
-        <div className="card-section">
+        {/* Overdue Tasks Section (spans both columns) */}
+        <div className="card-section dash-wide">
           <div className="card-header">
             <div className="card-title-group">
               <AlertTriangle size={18} className="text-muted" />
@@ -252,8 +256,8 @@ const EmployeeDashboard = () => {
           )}
         </div>
 
-        {/* My Tasks Section */}
-        <div className="card-section">
+        {/* My Tasks Section (spans both columns) */}
+        <div className="card-section dash-wide">
           <div className="card-header">
             <div className="card-title-group">
               <ListTodo size={18} className="text-muted" />

@@ -14,6 +14,7 @@ import {
   Settings,
   Menu,
   X,
+  MoreVertical,
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import { clearSession, getSessionUser } from "../services/auth";
@@ -46,6 +47,10 @@ const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const navToggleRef = useRef(null);
   const navMenuRef = useRef(null);
+  // Three-dot logout menu (compact screens only). Kept as its own state
+  // next to the nav-menu state so the two dropdowns never share a toggle.
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const logoutMenuRef = useRef(null);
   const [lastPath, setLastPath] = useState(location.pathname);
 
   // Close the mobile menu on outside click (the toggle button itself is
@@ -81,6 +86,36 @@ const Navbar = () => {
     };
   }, [menuOpen]);
 
+  // Dismissal rules for the three-dot logout menu: outside click or
+  // Escape closes it (selecting Logout closes it in the handler below).
+  // On wide screens CSS pins the logout button into the sidebar and
+  // ignores this state, so it only matters below 1024px.
+  useEffect(() => {
+    if (!logoutOpen) {
+      return undefined;
+    }
+
+    const handleOutsideClick = (event) => {
+      if (logoutMenuRef.current && !logoutMenuRef.current.contains(event.target)) {
+        setLogoutOpen(false);
+      }
+    };
+
+    const handleEscapeKey = (event) => {
+      if (event.key === "Escape") {
+        setLogoutOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscapeKey);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscapeKey);
+    };
+  }, [logoutOpen]);
+
   // Any navigation (link click, browser Back/Forward) closes the menu
   // again. This uses the "adjust state during render" pattern from the
   // React docs instead of an effect, so the menu closes in the same
@@ -111,29 +146,18 @@ const Navbar = () => {
   const themeLabel = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
 
   return (
-    <header className="app-header">
-      <div className="header-container">
-        {/* Brand / Logo */}
-        <div className="brand-group">
-          <Link to="/" className="brand-logo">
-            <div className="logo-icon-box">
-              <Zap className="logo-icon" size={20} />
-            </div>
-            <span className="brand-name">VOLTA</span>
-          </Link>
-          <span className="role-tag">
-            <Shield size={12} className="role-icon" />
-            {isManager ? "Manager Console" : "Employee Workspace"}
-          </span>
-        </div>
-
-        {/* Navigation Tabs (hamburger dropdown on small screens) */}
-        <nav
-          id="primary-nav"
-          className={`nav-menu${menuOpen ? " open" : ""}`}
-          ref={navMenuRef}
-          aria-label="Main navigation"
-        >
+    <>
+      {/* Left sidebar: primary navigation (as in the reference). On
+          narrow screens CSS turns it into a dropdown panel below the top
+          bar, opened by the hamburger button — the same menuOpen state,
+          outside-click and Escape handling as before, just repositioned. */}
+      <aside
+        id="primary-nav"
+        className={`app-sidebar${menuOpen ? " open" : ""}`}
+        ref={navMenuRef}
+      >
+        {/* Navigation Tabs */}
+        <nav className="nav-menu" aria-label="Main navigation">
           {isManager ? (
             <>
               <Link
@@ -191,23 +215,28 @@ const Navbar = () => {
             </>
           )}
         </nav>
+      </aside>
 
-        {/* User profile & actions */}
+      {/* Top bar: brand, theme toggle, notifications, profile, the
+          three-dot logout menu and (on compact screens) the hamburger. */}
+      <header className="app-topbar">
+        {/* Brand / Logo — stays in the top bar (as in the reference), so
+            the identity remains visible on every screen size even when
+            the sidebar collapses into the mobile dropdown. */}
+        <div className="brand-group">
+          <Link to="/" className="brand-logo">
+            <div className="logo-icon-box">
+              <Zap className="logo-icon" size={20} />
+            </div>
+            <span className="brand-name">VOLTA</span>
+          </Link>
+          <span className="role-tag">
+            <Shield size={12} className="role-icon" />
+            {isManager ? "Manager Console" : "Employee Workspace"}
+          </span>
+        </div>
+
         <div className="header-actions">
-          {/* Hamburger: only visible on small screens (see styles/Navbar.css) */}
-          <button
-            type="button"
-            className="nav-toggle"
-            ref={navToggleRef}
-            onClick={() => setMenuOpen((open) => !open)}
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
-            aria-expanded={menuOpen}
-            aria-controls="primary-nav"
-            title={menuOpen ? "Close menu" : "Open menu"}
-          >
-            {menuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-
           <button
             type="button"
             className="theme-toggle"
@@ -234,18 +263,55 @@ const Navbar = () => {
             </div>
           </div>
 
+          {/* Three-dot menu: below 1024px it holds the single logout
+              button; on wide screens CSS pins that same button to the
+              bottom-left of the sidebar (see styles/Navbar.css). */}
+          <div className="logout-menu" ref={logoutMenuRef}>
+            <button
+              type="button"
+              className="logout-menu-toggle"
+              onClick={() => setLogoutOpen((open) => !open)}
+              aria-label={logoutOpen ? "Close logout menu" : "Open logout menu"}
+              aria-expanded={logoutOpen}
+              title={logoutOpen ? "Close logout menu" : "Open logout menu"}
+            >
+              <MoreVertical size={18} />
+            </button>
+
+            <div className={`logout-menu-panel${logoutOpen ? " open" : ""}`}>
+              <button
+                type="button"
+                className="btn-logout"
+                onClick={() => {
+                  setLogoutOpen(false);
+                  handleLogout();
+                }}
+                title="Logout"
+              >
+                <LogOut size={16} />
+                <span className="logout-text">Logout</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Hamburger: last in the row, so it sits at the far-right
+              corner of the topbar on compact screens. Hidden by CSS
+              wherever the sidebar is visible. */}
           <button
             type="button"
-            className="btn-logout"
-            onClick={handleLogout}
-            title="Logout"
+            className="nav-toggle"
+            ref={navToggleRef}
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={menuOpen}
+            aria-controls="primary-nav"
+            title={menuOpen ? "Close menu" : "Open menu"}
           >
-            <LogOut size={16} />
-            <span className="logout-text">Logout</span>
+            {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
-      </div>
-    </header>
+      </header>
+    </>
   );
 };
 
