@@ -33,6 +33,15 @@
   color: var(--text-main);
 }
 
+/* Muted second line inside a meta value: the assigner's designation and
+   department under "Assigned by" (TaskDetails.jsx). */
+.meta-subtext {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
 /* History Timeline */
 .timeline {
   display: flex;

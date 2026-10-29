@@ -3,6 +3,15 @@ import { Link } from "react-router-dom";
 import { CalendarDays, ChevronRight } from "lucide-react";
 import api from "../services/api";
 
+// The manager who scheduled the meeting: full name plus designation
+// when the account has one. Returns "" for old meetings without the
+// record, so nothing (and never a raw id) is rendered in their place.
+const scheduledByLabel = (meeting) => {
+  const creator = meeting.createdBy;
+  if (!creator || !creator.name) return "";
+  return creator.designation ? `${creator.name} (${creator.designation})` : creator.name;
+};
+
 // Compact "Meeting Updates" preview shown on both dashboards.
 // The full functionality (scheduling, editing, summaries) lives on
 // /meetings, which this section links to.
@@ -98,6 +107,11 @@ const MeetingSection = () => {
                   <tr key={meeting._id}>
                     <td style={{ fontWeight: 600 }}>
                       <Link to="/meetings">{meeting.title}</Link>
+                      {scheduledByLabel(meeting) && (
+                        <span className="table-subtext">
+                          Scheduled by {scheduledByLabel(meeting)}
+                        </span>
+                      )}
                     </td>
                     <td>{fmtDate(meeting.date)}</td>
                     <td>{meeting.time}</td>

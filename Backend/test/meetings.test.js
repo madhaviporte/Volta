@@ -361,3 +361,75 @@ test("the meeting link is optional, validated as http(s), and shared with partic
   });
   assert.equal(asEmployee.status, 403);
 });
+
+test("the meeting creator is returned with their profile and never changes on edit", async () => {
+  // A dedicated scheduling manager with organizational details
+  const scheduler = await createUser({
+    name: "Creator Manager",
+    role: "manager",
+    designation: "COO",
+    department: "Operations",
+  });
+  const otherManager = await createUser({ name: "Second Manager", role: "manager" });
+  const schedulerToken = forgeToken(
+    { userId: scheduler._id.toString() },
+    { expiresIn: "1h" }
+  );
+  const otherToken = forgeToken(
+    { userId: otherManager._id.toString() },
+    { expiresIn: "1h" }
+  );
+
+  const created = await api.post("/api/meetings", {
+    token: schedulerToken,
+    body: {
+      title: "Creator visibility check",
+      date: inDays(4),
+      time: "14:00",
+      participants: [employeeA._id.toString()],
+    },
+  });
+  assert.equal(created.status, 201);
+
+  // The create response and the list carry the full creator profile,
+  // as an object - never a raw id string
+  const profile = created.body.data.createdBy;
+  assert.equal(typeof profile, "object");
+  assert.equal(profile.name, "Creator Manager");
+  assert.equal(profile.designation, "COO");
+  assert.equal(profile.department, "Operations");
+
+  const list = await api.get("/api/meetings", { token: schedulerToken });
+  assert.equal(list.status, 200);
+  const listed = list.body.data.find((m) => m._id === created.body.data._id);
+  assert.equal(listed.createdBy.name, "Creator Manager");
+  assert.equal(listed.createdBy.designation, "COO");
+
+  // A participant (employee) sees the same creator details
+  const asEmployee = await api.get("/api/meetings", { token: tokenA });
+  assert.equal(asEmployee.status, 200);
+  const seenByEmployee = asEmployee.body.data.find(
+    (m) => m._id === created.body.data._id
+  );
+  assert.ok(seenByEmployee, "the participant can read the meeting");
+  assert.equal(seenByEmployee.createdBy.name, "Creator Manager");
+  assert.equal(seenByEmployee.createdBy.designation, "COO");
+
+  // Another manager edits the meeting: the ORIGINAL creator must stay
+  const edited = await api.put(`/api/meetings/${created.body.data._id}`, {
+    token: otherToken,
+    body: { title: "Creator visibility check (edited)" },
+  });
+  assert.equal(edited.status, 200);
+  assert.equal(edited.body.data.createdBy.name, "Creator Manager", "edit keeps the original scheduler");
+  assert.equal(edited.body.data.createdBy.designation, "COO");
+  assert.notEqual(edited.body.data.createdBy.name, "Second Manager");
+
+  // And the edit never smuggles an assigner/creator id from the body
+  const smuggled = await api.put(`/api/meetings/${created.body.data._id}`, {
+    token: otherToken,
+    body: { title: "Creator visibility check (edited twice)", createdBy: otherManager._id.toString() },
+  });
+  assert.equal(smuggled.status, 200);
+  assert.equal(smuggled.body.data.createdBy.name, "Creator Manager", "body createdBy is ignored");
+});

@@ -105,10 +105,13 @@ const resolveParticipants = async (participants) => {
   return { ids: unique };
 };
 
+// createdBy carries the ORIGINAL scheduling manager: name plus their
+// organizational details so every viewer sees who scheduled the meeting
+// (never a raw id). Editing the meeting never touches this field.
 const meetingWithNames = async (id) =>
   Meeting.findById(id)
     .populate("participants", "name role")
-    .populate("createdBy", "name role");
+    .populate("createdBy", "name role designation department");
 
 // ---------- Meeting notifications ----------
 
@@ -276,7 +279,8 @@ const getMeetings = async (req, res) => {
 
     const meetings = await Meeting.find(filter)
       .populate("participants", "name role")
-      .populate("createdBy", "name role")
+      // Same creator profile as the detail helpers (list + details views)
+      .populate("createdBy", "name role designation department")
       .sort({ date: 1, time: 1 });
 
     return res.status(200).json({

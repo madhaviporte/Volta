@@ -368,8 +368,29 @@ const TaskDetails = () => {
                 </div>
 
                 <div className="meta-item">
-                  <span className="meta-label">Created By</span>
-                  <span className="meta-value">{task.createdBy?.name || "System"}</span>
+                  <span className="meta-label">Assigned by</span>
+                  <span className="meta-value">
+                    {/* The manager who created/assigned the task (createdBy
+                        from the API). Old or broken references fall back to
+                        a plain message - an id is never shown. */}
+                    {task.createdBy && task.createdBy.name ? (
+                      <>
+                        {task.createdBy.name}
+                        {(task.createdBy.designation || task.createdBy.department) && (
+                          <span className="meta-subtext">
+                            {[
+                              task.createdBy.designation,
+                              task.createdBy.department,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="meta-subtext">Not recorded</span>
+                    )}
+                  </span>
                 </div>
 
                 <div className="meta-item">
@@ -436,7 +457,12 @@ const TaskDetails = () => {
                         </span>
                         <div className="timeline-text">
                           <strong>{historyLabel(entry.action)}</strong> by{" "}
-                          <span>{entry.performedBy?.name || "User"}</span>
+                          <span>
+                            {entry.performedBy?.name || "User"}
+                            {entry.performedBy?.designation
+                              ? ` (${entry.performedBy.designation})`
+                              : ""}
+                          </span>
                           <span style={{ color: "var(--text-muted)" }}>
                             {historyDetail(entry)}
                           </span>

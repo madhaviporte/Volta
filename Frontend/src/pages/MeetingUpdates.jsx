@@ -292,6 +292,15 @@ const MeetingUpdates = () => {
     return names.length > 0 ? names.join(", ") : "No participants";
   };
 
+  // The manager who scheduled the meeting: full name plus designation
+  // when the account has one. Returns "" for old meetings without the
+  // record, so nothing (and never a raw id) is rendered in their place.
+  const scheduledByLabel = (meeting) => {
+    const creator = meeting.createdBy;
+    if (!creator || !creator.name) return "";
+    return creator.designation ? `${creator.name} (${creator.designation})` : creator.name;
+  };
+
   const renderMeeting = (meeting) => {
     const items = (meeting.actionItems || []).filter(Boolean);
     const hasSummary = Boolean(meeting.summary) || items.length > 0;
@@ -352,6 +361,13 @@ const MeetingUpdates = () => {
               <strong style={{ color: "var(--text-main)" }}>Participants:</strong>{" "}
               {participantNames(meeting)}
             </div>
+
+            {scheduledByLabel(meeting) && (
+              <div style={{ fontSize: "13px", color: "var(--text-muted)", marginTop: "6px" }}>
+                <strong style={{ color: "var(--text-main)" }}>Scheduled by:</strong>{" "}
+                {scheduledByLabel(meeting)}
+              </div>
+            )}
 
             {hasSummary && (
               <div

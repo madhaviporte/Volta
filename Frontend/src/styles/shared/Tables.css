@@ -51,3 +51,14 @@
 .modern-table tbody tr:hover {
   background-color: var(--subtle-bg);
 }
+
+/* ---------- Cell sub-line ---------- */
+/* Small muted second line under a cell main value, e.g. "Assigned by
+   Name (COO)" beneath a task title (ManagerTasks, EmployeeDashboard). */
+.table-subtext {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+}

@@ -90,6 +90,15 @@ const assigneeNames = (task) => {
   return task.assignedTo ? task.assignedTo.name : "Unassigned";
 };
 
+// Who assigned the task: full name plus designation when the account has
+// one. Returns "" for old tasks without assigner data, so nothing (and
+// never a raw id) is rendered in their place.
+const assignedByLabel = (task) => {
+  const creator = task.createdBy;
+  if (!creator || !creator.name) return "";
+  return creator.designation ? `${creator.name} (${creator.designation})` : creator.name;
+};
+
 const ManagerTasks = () => {
   // Everyone a task can be assigned to: employees and eligible managers
   // (the endpoint is manager-only, and the backend re-validates every id)
@@ -490,6 +499,11 @@ const ManagerTasks = () => {
                         <Link to={`/tasks/${task._id}`} style={{ fontWeight: 600 }}>
                           {task.title}
                         </Link>
+                        {assignedByLabel(task) && (
+                          <span className="table-subtext">
+                            Assigned by {assignedByLabel(task)}
+                          </span>
+                        )}
                       </td>
                       <td>{assigneeNames(task)}</td>
                       <td>{renderPriorityBadge(task.priority)}</td>

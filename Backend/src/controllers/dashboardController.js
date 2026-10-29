@@ -134,7 +134,9 @@ const getEmployeeDashboard = async (req, res) => {
       $or: [{ assignees: req.user._id }, { assignedTo: req.user._id }],
     })
       .populate("assignedTo", "name")
-      .populate("createdBy", "name")
+      // The assigner shown next to each task in the employee's list
+      // (name + organizational details, never a raw id)
+      .populate("createdBy", "name designation department")
       .sort({ dueDate: 1 });
 
     return res.status(200).json({

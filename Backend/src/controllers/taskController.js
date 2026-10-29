@@ -48,7 +48,10 @@ const recordHistory = async (taskId, action, performedById, oldValue, newValue, 
 const populateTask = (query) => {
   return query
     .populate("assignedTo", "name")
-    .populate("createdBy", "name")
+    // The assigner: name plus their organizational details so every
+    // assignee can see WHO assigned the task (never a raw id). Password
+    // is never part of an explicit field list like this.
+    .populate("createdBy", "name designation department role")
     .populate("assignees", "name")
     .populate("progress.user", "name role");
 };
@@ -73,6 +76,14 @@ const addDeadlineFlagsFor = (task, viewerId) => {
   plain.myStatus = myStatus;
 
   return plain;
+};
+
+// How the assigner is named inside notification text: their full name
+// plus the designation (COO, CTO, Manager, ...) when the account has
+// one. Used for the authenticated actor only - never an id from a body.
+const assignerLabel = (user) => {
+  if (!user) return "";
+  return user.designation ? `${user.name} (${user.designation})` : user.name;
 };
 
 // Truncates a comment so a notification message stays one readable line.
@@ -281,7 +292,7 @@ const createTask = async (req, res) => {
         user: assigneeId,
         task: task,
         type: "task_assigned",
-        message: `You have been assigned the task "${task.title}" by ${req.user.name}`,
+        message: `You have been assigned the task "${task.title}" by ${assignerLabel(req.user)}`,
         dedupeKey: `task_assigned:${task._id}:${assigneeId}`,
       });
     }
@@ -643,6 +654,8 @@ const updateTask = async (req, res) => {
       const oldEmployeeName = nameOf(removedIds[0]);
       const newEmployeeName = nameOf(addedIds[0]);
 
+      // performedBy is the authenticated manager who reassigned it, so
+      // the history identifies Manager B (not the original creator)
       const reassignedEntry = await recordHistory(
         task._id,
         "REASSIGNED",
@@ -656,7 +669,7 @@ const updateTask = async (req, res) => {
         user: task.assignedTo,
         task: task,
         type: "task_reassigned",
-        message: `Task "${task.title}" has been assigned to you by ${req.user.name}`,
+        message: `Task "${task.title}" has been assigned to you by ${assignerLabel(req.user)}`,
         dedupeKey: `task_reassigned:${task._id}:${reassignedEntry._id}`,
       });
 
@@ -668,7 +681,7 @@ const updateTask = async (req, res) => {
           user: task.createdBy,
           task: task,
           type: "task_reassigned",
-          message: `${req.user.name} reassigned "${task.title}" from ${oldEmployeeName || "unassigned"} to ${newEmployeeName}`,
+          message: `${assignerLabel(req.user)} reassigned "${task.title}" from ${oldEmployeeName || "unassigned"} to ${newEmployeeName}`,
           dedupeKey: `task_reassigned_manager:${task._id}:${reassignedEntry._id}`,
         });
       }
@@ -695,7 +708,7 @@ const updateTask = async (req, res) => {
           user: addedId,
           task: task,
           type: "task_reassigned",
-          message: `Task "${task.title}" has been assigned to you by ${req.user.name}`,
+          message: `Task "${task.title}" has been assigned to you by ${assignerLabel(req.user)}`,
           dedupeKey: `task_reassigned:${task._id}:${assignedEntry._id}:${addedId}`,
         });
       }
@@ -716,7 +729,7 @@ const updateTask = async (req, res) => {
           user: task.createdBy,
           task: task,
           type: "task_reassigned",
-          message: `${req.user.name} updated the assignees of "${task.title}"`,
+          message: `${assignerLabel(req.user)} updated the assignees of "${task.title}"`,
           dedupeKey: `task_reassigned_manager:${task._id}:${[...addedIds, ...removedIds].join("-")}`,
         });
       }
@@ -1146,8 +1159,11 @@ const getTaskHistory = async (req, res) => {
 
     // Oldest entry first so the history reads in order. `assignee` names
     // the person a status entry belongs to on a shared task.
+    // performedBy is who actually did each action (the assigner for
+    // ASSIGNED/REASSIGNED rows); designation/department ride along so the
+    // timeline can show "Assigned by Name (COO)" without a second lookup.
     const history = await TaskHistory.find({ task: task._id })
-      .populate("performedBy", "name role")
+      .populate("performedBy", "name role designation department")
       .populate("assignee", "name role")
       .sort({ createdAt: 1 });
 

@@ -23,6 +23,15 @@ const renderStatusBadge = (status) => {
   return <span className={`badge badge-status-${s}`}>{status || "Pending"}</span>;
 };
 
+// Who assigned the task: full name plus designation when the account has
+// one. Returns "" for old tasks without assigner data, so nothing (and
+// never a raw id) is rendered in their place.
+const assignedByLabel = (task) => {
+  const creator = task.createdBy;
+  if (!creator || !creator.name) return "";
+  return creator.designation ? `${creator.name} (${creator.designation})` : creator.name;
+};
+
 const EmployeeDashboard = () => {
   const user = JSON.parse(localStorage.getItem("user") || "null");
 
@@ -286,6 +295,11 @@ const EmployeeDashboard = () => {
                         <Link to={`/tasks/${task._id}`} style={{ fontWeight: 600 }}>
                           {task.title}
                         </Link>
+                        {assignedByLabel(task) && (
+                          <span className="table-subtext">
+                            Assigned by {assignedByLabel(task)}
+                          </span>
+                        )}
                       </td>
                       <td>{renderPriorityBadge(task.priority)}</td>
                       <td>
