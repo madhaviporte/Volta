@@ -70,7 +70,10 @@ test("create task: every invalid input answers 400 with a clear message", async 
     [{ title: "T", assignedTo: employeeA._id.toString(), dueDate: "not-a-date" }, "dueDate must be a valid date"],
     [{ title: "T", assignedTo: employeeA._id.toString(), dueDate: inDays(2), priority: "Glacial" }, "Priority must be one of: Low, Medium, High, Urgent"],
     [{ title: "T", assignedTo: employeeA._id.toString(), dueDate: inDays(2), status: "Done-ish" }, "Status must be one of: Pending, In Progress, Completed, On Hold"],
-    [{ title: "T", assignedTo: manager._id.toString(), dueDate: inDays(2) }, "assignedTo must be an existing employee"],
+    // A malformed id in the new multi-select list answers 400 too
+    // (assigning the task TO a manager is allowed - see
+    // multi-assignee.test.js)
+    [{ title: "T", assignees: ["not-an-id"], dueDate: inDays(2) }, "assignees must be existing, active users"],
   ];
 
   for (const [body, expectedMessage] of cases) {

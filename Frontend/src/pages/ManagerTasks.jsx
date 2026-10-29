@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import api from "../services/api";
 import Navbar from "../components/Navbar";
+import DescriptionEditor from "../components/DescriptionEditor";
 
 const renderPriorityBadge = (priority) => {
   const p = (priority || "Medium").toLowerCase();
@@ -23,15 +24,83 @@ const renderStatusBadge = (status) => {
   return <span className={`badge badge-status-${s}`}>{status || "Pending"}</span>;
 };
 
+// Adds/removes one user from an assignee selection (create and edit forms).
+// The form state is an OBJECT (title, description, assignees, ...), so the
+// updater spreads it and replaces only the assignees list - handing the bare
+// array to the setter would replace the whole form value with an array and
+// leave every other field (and the selection itself) undefined.
+const toggleAssignee = (setter, userId) => {
+  setter((prev) => {
+    const current = Array.isArray(prev.assignees) ? prev.assignees : [];
+
+    return {
+      ...prev,
+      assignees: current.includes(userId)
+        ? current.filter((id) => id !== userId)
+        : [...current, userId],
+    };
+  });
+};
+
+// Multi-select "Assign To" field: one checkbox per eligible user. Both the
+// create and the edit form render this same block, so they can never
+// disagree on the shape of the payload (assignees: [id, id, ...]).
+// Managers and employees are both selectable - being assigned a task does
+// not change anyone's role or permissions.
+const AssigneePicker = ({ users = [], selected = [], onToggle }) => {
+  if (users.length === 0) {
+    return (
+      <div className="assignee-picker">
+        <p className="assignee-picker-empty">No users available yet</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="assignee-picker" role="group" aria-label="Assign to">
+      {users.map((person) => {
+        const checked = selected.includes(person._id);
+
+        return (
+          <label
+            key={person._id}
+            className={`assignee-option${checked ? " selected" : ""}`}
+          >
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={() => onToggle(person._id)}
+            />
+            <span className="assignee-option-name">{person.name}</span>
+            <span className="assignee-option-role">
+              {person.designation || (person.role === "manager" ? "Manager" : "Employee")}
+            </span>
+          </label>
+        );
+      })}
+    </div>
+  );
+};
+
+// Every name a task is assigned to, in the order they were selected.
+const assigneeNames = (task) => {
+  const names = (task.assignees || []).map((person) => person.name).filter(Boolean);
+
+  if (names.length > 0) return names.join(", ");
+  return task.assignedTo ? task.assignedTo.name : "Unassigned";
+};
+
 const ManagerTasks = () => {
-  const [employees, setEmployees] = useState([]);
+  // Everyone a task can be assigned to: employees and eligible managers
+  // (the endpoint is manager-only, and the backend re-validates every id)
+  const [assignableUsers, setAssignableUsers] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [message, setMessage] = useState("");
 
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    assignedTo: "",
+    assignees: [],
     priority: "Medium",
     dueDate: "",
   });
@@ -46,7 +115,7 @@ const ManagerTasks = () => {
   const [editFormData, setEditFormData] = useState({
     title: "",
     description: "",
-    assignedTo: "",
+    assignees: [],
     priority: "Medium",
     dueDate: "",
   });
@@ -58,15 +127,18 @@ const ManagerTasks = () => {
     });
   };
 
-  // Managers pick an assignee from this list
+  // Managers pick their assignees from this list (active users only;
+  // the backend rejects anything else anyway)
   const loadEmployees = () => {
     return api
-      .get("/users?role=employee")
+      .get("/users")
       .then((response) => {
-        setEmployees(response.data.data);
+        setAssignableUsers(
+          (response.data.data || []).filter((person) => person.isActive !== false)
+        );
       })
       .catch(() => {
-        setMessage("Could not load employees");
+        setMessage("Could not load users");
       });
   };
 
@@ -92,6 +164,13 @@ const ManagerTasks = () => {
     // Ignore repeat submits while the first request is still pending
     if (creating) return;
 
+    // At least one person must be selected (the old single dropdown made
+    // this impossible to skip)
+    if (formData.assignees.length === 0) {
+      setMessage("Select at least one person to assign this task to");
+      return;
+    }
+
     setCreating(true);
 
     try {
@@ -99,7 +178,7 @@ const ManagerTasks = () => {
 
       setMessage("Task created successfully");
 
-      setFormData({ title: "", description: "", assignedTo: "", priority: "Medium", dueDate: "" });
+      setFormData({ title: "", description: "", assignees: [], priority: "Medium", dueDate: "" });
       loadTasks();
     } catch (error) {
       setMessage(error.response?.data?.message || "Could not create task");
@@ -143,7 +222,13 @@ const ManagerTasks = () => {
     setEditFormData({
       title: task.title,
       description: task.description || "",
-      assignedTo: task.assignedTo?._id || "",
+      // Older tasks only carry the primary assignee, so both shapes end
+      // up as the same list of ids
+      assignees: task.assignees?.length
+        ? task.assignees.map((person) => person._id)
+        : task.assignedTo?._id
+          ? [task.assignedTo._id]
+          : [],
       priority: task.priority,
       dueDate: task.dueDate ? task.dueDate.slice(0, 10) : "",
     });
@@ -162,6 +247,11 @@ const ManagerTasks = () => {
     e.preventDefault();
 
     if (saving) return;
+
+    if (editFormData.assignees.length === 0) {
+      setMessage("Select at least one person to assign this task to");
+      return;
+    }
 
     setSaving(true);
 
@@ -226,32 +316,23 @@ const ManagerTasks = () => {
               </div>
 
               <div className="form-group span-2">
-                <label>Description</label>
-                <input
-                  name="description"
-                  className="form-control"
+                <label htmlFor="task-description">Description</label>
+                <DescriptionEditor
+                  fieldId="task-description"
                   placeholder="Provide context or instructions..."
                   value={formData.description}
-                  onChange={handleChange}
+                  onChange={(text) => setFormData((prev) => ({ ...prev, description: text }))}
                 />
               </div>
 
-              <div className="form-group">
-                <label>Assign To *</label>
-                <select
-                  name="assignedTo"
-                  className="form-control"
-                  value={formData.assignedTo}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select employee</option>
-                  {employees.map((employee) => (
-                    <option key={employee._id} value={employee._id}>
-                      {employee.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="form-group span-2">
+                <label>Assign To * (pick one or more people)</label>
+
+                <AssigneePicker
+                  users={assignableUsers}
+                  selected={formData.assignees}
+                  onToggle={(userId) => toggleAssignee(setFormData, userId)}
+                />
               </div>
 
               <div className="form-group">
@@ -313,30 +394,21 @@ const ManagerTasks = () => {
                 </div>
 
                 <div className="form-group span-2">
-                  <label>Description</label>
-                  <input
-                    name="description"
-                    className="form-control"
+                  <label htmlFor="task-edit-description">Description</label>
+                  <DescriptionEditor
+                    fieldId="task-edit-description"
                     value={editFormData.description}
-                    onChange={handleEditChange}
+                    onChange={(text) => setEditFormData((prev) => ({ ...prev, description: text }))}
                   />
                 </div>
 
-                <div className="form-group">
-                  <label>Assign To *</label>
-                  <select
-                    name="assignedTo"
-                    className="form-control"
-                    value={editFormData.assignedTo}
-                    onChange={handleEditChange}
-                    required
-                  >
-                    {employees.map((employee) => (
-                      <option key={employee._id} value={employee._id}>
-                        {employee.name}
-                      </option>
-                    ))}
-                  </select>
+                <div className="form-group span-2">
+                  <label>Assign To * (pick one or more people)</label>
+                  <AssigneePicker
+                    users={assignableUsers}
+                    selected={editFormData.assignees}
+                    onToggle={(userId) => toggleAssignee(setEditFormData, userId)}
+                  />
                 </div>
 
                 <div className="form-group">
@@ -419,7 +491,7 @@ const ManagerTasks = () => {
                           {task.title}
                         </Link>
                       </td>
-                      <td>{task.assignedTo?.name || "Unassigned"}</td>
+                      <td>{assigneeNames(task)}</td>
                       <td>{renderPriorityBadge(task.priority)}</td>
                       <td>{renderStatusBadge(task.status)}</td>
                       <td>{task.dueDate ? task.dueDate.slice(0, 10) : "-"}</td>

@@ -4,6 +4,7 @@ const Notification = require("../models/Notification");
 const Task = require("../models/Task");
 const { isValidId } = require("../utils/validation");
 const { isTaskOverdue, isTaskDueSoon } = require("../utils/deadline");
+const { getAssigneeIds } = require("../utils/assignees");
 
 // ---------- Generating notifications ----------
 
@@ -13,14 +14,16 @@ const { isTaskOverdue, isTaskDueSoon } = require("../utils/deadline");
 // changes hands, so task activity rows are never lost.
 const DEADLINE_NOTIFICATION_TYPES = ["deadline_soon", "overdue"];
 
-// Creates one notification, but only if the same task does not already
-// have a notification of the same type for the same user.
+// Creates one notification for one assignee, but only if that person does
+// not already have a reminder of the same type for this task. The dedupe
+// key carries the user id, so a task shared by five people reminds each
+// of them exactly once.
 // This is what stops duplicate notifications from being created.
-const createNotificationOnce = async (task, type, message) => {
+const createNotificationOnce = async (task, userId, type, message) => {
   const existing = await Notification.findOne({
     task: task._id,
     type: type,
-    user: task.assignedTo,
+    user: userId,
   });
 
   if (existing) {
@@ -29,11 +32,11 @@ const createNotificationOnce = async (task, type, message) => {
 
   try {
     await Notification.create({
-      user: task.assignedTo,
+      user: userId,
       task: task._id,
       type: type,
       message: message,
-      dedupeKey: `deadline:${task._id}:${task.assignedTo}:${type}`,
+      dedupeKey: `deadline:${task._id}:${userId}:${type}`,
     });
   } catch (error) {
     // Code 11000 = duplicate key. This can only happen when two
@@ -90,20 +93,23 @@ const generateDeadlineNotifications = async () => {
     const tasks = await Task.find({ status: { $ne: "Completed" } });
 
     for (const task of tasks) {
+      // Everyone the task is assigned to gets their own reminder
+      const assigneeIds = getAssigneeIds(task);
+
       if (isTaskDueSoon(task)) {
-        await createNotificationOnce(
-          task,
-          "deadline_soon",
-          `Deadline approaching: "${task.title}" is due on ${task.dueDate.toLocaleDateString()}`
-        );
+        const message = `Deadline approaching: "${task.title}" is due on ${task.dueDate.toLocaleDateString()}`;
+
+        for (const assigneeId of assigneeIds) {
+          await createNotificationOnce(task, assigneeId, "deadline_soon", message);
+        }
       }
 
       if (isTaskOverdue(task)) {
-        await createNotificationOnce(
-          task,
-          "overdue",
-          `Task overdue: "${task.title}" was due on ${task.dueDate.toLocaleDateString()}`
-        );
+        const message = `Task overdue: "${task.title}" was due on ${task.dueDate.toLocaleDateString()}`;
+
+        for (const assigneeId of assigneeIds) {
+          await createNotificationOnce(task, assigneeId, "overdue", message);
+        }
       }
     }
   } catch (error) {

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import api from "../services/api";
 import Navbar from "../components/Navbar";
+import { parseDescription } from "../utils/description";
 
 const renderPriorityBadge = (priority) => {
   const p = (priority || "Medium").toLowerCase();
@@ -23,6 +24,7 @@ const HISTORY_LABELS = {
   TASK_CREATED: "Task created",
   ASSIGNED: "Assigned",
   REASSIGNED: "Reassigned",
+  UNASSIGNED: "Unassigned",
   UPDATED: "Task updated",
   STATUS_CHANGED: "Status changed",
   DELETED: "Task deleted",
@@ -55,7 +57,12 @@ const historyDetail = (entry) => {
   const newValue = entry ? entry.newValue : undefined;
 
   if (action === "STATUS_CHANGED") {
-    return ` (${oldValue || "-"} → ${newValue || "-"})`;
+    // On a shared task the entry names the person it belongs to
+    const who =
+      isRecord(entry) && isRecord(entry.assignee) && entry.assignee.name
+        ? ` (${entry.assignee.name})`
+        : "";
+    return ` (${oldValue || "-"} → ${newValue || "-"})${who}`;
   }
 
   if (action === "REASSIGNED") {
@@ -64,6 +71,10 @@ const historyDetail = (entry) => {
 
   if (action === "ASSIGNED") {
     return newValue ? ` to ${newValue}` : "";
+  }
+
+  if (action === "UNASSIGNED") {
+    return oldValue ? ` ${oldValue}` : "";
   }
 
   if (action === "TASK_CREATED") {
@@ -240,6 +251,26 @@ const TaskDetails = () => {
   const backText =
     user && user.role === "manager" ? "Back to Tasks" : "Back to My Tasks";
 
+  // Every assignee of this task with their own status, as returned by the
+  // backend. Legacy tasks carry only the primary assignee, which the
+  // fallback below keeps working (the same value as before).
+  const assigneeRows = (task.progress || [])
+    .map((entry) => ({
+      id: entry.user?._id || entry.user,
+      name: entry.user?.name || "Unknown",
+      status: entry.status,
+    }))
+    .filter((entry) => entry.id);
+
+  const assigneeNames =
+    (task.assignees || []).map((person) => person.name).filter(Boolean).join(", ") ||
+    (task.assignedTo ? task.assignedTo.name : "");
+
+  // Paragraphs and lists stored in the description (see
+  // utils/description.js). Old plain-text descriptions parse into a
+  // single paragraph, so they render exactly as they always have.
+  const descriptionBlocks = parseDescription(task.description);
+
   return (
     <div className="app-layout">
       <Navbar />
@@ -282,7 +313,9 @@ const TaskDetails = () => {
                   </label>
                   <select
                     className="form-control"
-                    value={task.status}
+                    // On a shared task this is the viewer's OWN status
+                    // (each assignee updates their own share)
+                    value={task.myStatus || task.status}
                     onChange={handleStatusChange}
                     disabled={updatingStatus}
                     style={{ fontWeight: 600 }}
@@ -295,17 +328,43 @@ const TaskDetails = () => {
                 </div>
               </div>
 
-              <div style={{ margin: "16px 0", color: "var(--text-main)", fontSize: "14px" }}>
-                <strong>Description:</strong>
-                <p style={{ marginTop: "4px", color: "var(--text-muted)", whiteSpace: "pre-line" }}>
-                  {task.description || "No description provided."}
-                </p>
+              {/* Description: paragraphs and lists come straight from
+                  the plain-text markers (utils/description.js). An empty
+                  description keeps the same message it always had. */}
+              <div className="task-description">
+                <strong className="task-description-label">Description:</strong>
+
+                <div className="description-body">
+                  {descriptionBlocks.length === 0 ? (
+                    <p className="description-empty">No description provided.</p>
+                  ) : (
+                    descriptionBlocks.map((block, blockIndex) => {
+                      if (block.type === "p") {
+                        return (
+                          <p key={blockIndex}>{block.items.join("\n")}</p>
+                        );
+                      }
+
+                      const ListTag = block.type === "ul" ? "ul" : "ol";
+
+                      return (
+                        <ListTag key={blockIndex}>
+                          {block.items.map((item, itemIndex) => (
+                            <li key={itemIndex}>{item}</li>
+                          ))}
+                        </ListTag>
+                      );
+                    })
+                  )}
+                </div>
               </div>
 
               <div className="meta-list">
                 <div className="meta-item">
                   <span className="meta-label">Assigned To</span>
-                  <span className="meta-value">{task.assignedTo?.name || "Unassigned"}</span>
+                  <span className="meta-value">
+                    {assigneeNames || "Unassigned"}
+                  </span>
                 </div>
 
                 <div className="meta-item">
@@ -329,6 +388,28 @@ const TaskDetails = () => {
                   </div>
                 )}
               </div>
+
+              {/* One row per assignee, shown only for a shared task so a
+                  single-assignee task looks exactly as it always did. Each
+                  person's own status comes straight from the backend. */}
+              {assigneeRows.length > 1 && (
+                <div className="assignee-progress">
+                  <span className="assignee-progress-label">Assignee progress</span>
+                  {assigneeRows.map((entry) => {
+                    const entryStatus = entry.status || "Pending";
+                    const badgeClass = entryStatus.toLowerCase().replace(/\s+/g, "-");
+
+                    return (
+                      <div className="assignee-progress-row" key={entry.id}>
+                        <span className="assignee-progress-name">{entry.name}</span>
+                        <span className={`badge badge-status-${badgeClass}`}>
+                          {entryStatus}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Task History Timeline */}

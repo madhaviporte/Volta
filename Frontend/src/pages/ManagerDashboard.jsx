@@ -28,6 +28,15 @@ const renderStatusBadge = (status) => {
   return <span className={`badge badge-status-${s}`}>{status || "Pending"}</span>;
 };
 
+// Everyone a task is assigned to, in selection order. Older tasks only
+// carry the primary assignee, which the fallback keeps working.
+const assigneeNames = (task) => {
+  const names = (task.assignees || []).map((person) => person.name).filter(Boolean);
+
+  if (names.length > 0) return names.join(", ");
+  return task.assignedTo ? task.assignedTo.name : "Unassigned";
+};
+
 const ManagerDashboard = () => {
   const user = JSON.parse(localStorage.getItem("user") || "null");
 
@@ -257,7 +266,7 @@ const ManagerDashboard = () => {
                           {task.title}
                         </Link>
                       </td>
-                      <td>{task.assignedTo?.name || "Unassigned"}</td>
+                      <td>{assigneeNames(task)}</td>
                       <td>{renderPriorityBadge(task.priority)}</td>
                       <td>{task.dueDate ? task.dueDate.slice(0, 10) : "-"}</td>
                       <td>{renderStatusBadge(task.status)}</td>
@@ -352,7 +361,7 @@ const ManagerDashboard = () => {
                           {task.title}
                         </Link>
                       </td>
-                      <td>{task.assignedTo?.name || "Unassigned"}</td>
+                      <td>{assigneeNames(task)}</td>
                       <td>{renderPriorityBadge(task.priority)}</td>
                       <td>{renderStatusBadge(task.status)}</td>
                       <td>{task.dueDate ? task.dueDate.slice(0, 10) : "-"}</td>

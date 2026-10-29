@@ -21,9 +21,11 @@ const isTaskDueSoon = (task) => {
 };
 
 // Adds isOverdue / dueSoon flags to a task so the frontend
-// does not have to calculate them itself
+// does not have to calculate them itself. It accepts a mongoose document
+// or a plain object (callers pass a shallow copy with a different status
+// when the flags must follow one person's own share of a shared task).
 const addDeadlineFlags = (task) => {
-  const taskObject = task.toObject();
+  const taskObject = typeof task.toObject === "function" ? task.toObject() : { ...task };
   taskObject.isOverdue = isTaskOverdue(task);
   taskObject.dueSoon = isTaskDueSoon(task);
   return taskObject;

@@ -291,7 +291,9 @@ const EmployeeDashboard = () => {
                       <td>
                         <select
                           className="select-status-inline"
-                          value={task.status}
+                          // This person's OWN status on the task: a shared
+                          // task updates only their own row, never anyone's
+                          value={task.myStatus || task.status}
                           onChange={(e) => handleStatusChange(task, e.target.value)}
                           disabled={updatingTaskId !== null}
                         >

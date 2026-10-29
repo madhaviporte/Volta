@@ -33,6 +33,16 @@ const taskHistorySchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: null,
     },
+
+    // For STATUS_CHANGED entries: whose status changed. Tasks with a
+    // single assignee record the same values as before, so old rows and
+    // old readers are unaffected; the field simply says which person a
+    // status entry belongs to when a task has several assignees.
+    assignee: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
   },
   {
     timestamps: true, // gives createdAt, shown with each history entry

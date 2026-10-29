@@ -211,8 +211,16 @@ const makeApi = (baseUrl) => {
 const PASSWORD = "test-password-123";
 
 // Creates a user directly in the test database (bypasses the API so fixtures
-// never consume the login rate limit).
-const createUser = async ({ name, email, role = "employee", isActive = true } = {}) => {
+// never consume the login rate limit). `designation` and `department` are
+// the existing organizational-hierarchy fields on User.
+const createUser = async ({
+  name,
+  email,
+  role = "employee",
+  isActive = true,
+  designation,
+  department,
+} = {}) => {
   const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   return User.create({
@@ -221,6 +229,8 @@ const createUser = async ({ name, email, role = "employee", isActive = true } = 
     password: await bcrypt.hash(PASSWORD, 10),
     role,
     isActive,
+    ...(designation ? { designation } : {}),
+    ...(department ? { department } : {}),
   });
 };
 

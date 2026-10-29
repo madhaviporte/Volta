@@ -116,6 +116,93 @@
   color: var(--text-main);
 }
 
+/* ---------- Per-assignee progress (shared tasks) ---------- */
+/* One row per person on a multi-assignee task, shown under the task meta
+   (TaskDetails.jsx) with that person's own status. It only renders when a
+   task has several assignees, so single-assignee pages look exactly as
+   they did before, and it reuses the existing status badge classes. */
+.assignee-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+}
+
+.assignee-progress-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.assignee-progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--subtle-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.assignee-progress-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--text-main);
+}
+
+/* ---------- Task description (paragraphs + lists) ---------- */
+/* Renders the blocks parsed by src/utils/description.js. Line breaks
+   inside a paragraph are preserved (pre-line), which is exactly how the
+   old plain-text descriptions displayed, so existing tasks look the
+   same as before. */
+.task-description {
+  margin: 16px 0;
+  font-size: 14px;
+  color: var(--text-main);
+}
+
+.task-description-label {
+  color: var(--text-main);
+}
+
+.description-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  color: var(--text-muted);
+}
+
+.description-body p {
+  margin: 0;
+  white-space: pre-line;
+}
+
+.description-body ul,.description-body ol {
+  margin: 0;
+  padding-left: 22px; /* the global reset zeroes list padding */
+}
+
+.description-body li + li {
+  margin-top: 4px;
+}
+
+.description-body li::marker {
+  color: var(--primary);
+}
+
+.description-empty {
+  color: var(--text-muted);
+}
+
 @media (max-width: 900px) {
   .task-detail-grid {
     grid-template-columns: 1fr;
