@@ -18,6 +18,7 @@ const Notification = require("./src/models/Notification");
 const {
   verifyEmailConnection,
   isEmailEnabled,
+  describeEmailConfig,
 } = require("./src/utils/emailService");
 const {
   retryFailedNotificationEmails,
@@ -161,6 +162,11 @@ const start = async () => {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
+
+  // One line that states, from the production process itself, whether
+  // email can send at all and which SMTP_* names are absent (names only,
+  // never values). This is the first thing to look for in the Render logs.
+  console.log(describeEmailConfig());
 
   // Verify the SMTP connection once at startup (informational only -
   // skipped entirely when email is disabled or unconfigured, so an

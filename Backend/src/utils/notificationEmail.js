@@ -306,6 +306,11 @@ const dispatchNotificationEmail = async (notificationId) => {
         { _id: claimed._id, emailStatus: "sending" },
         { $set: { emailStatus: "skipped" } }
       );
+
+      // Server-side trace only: id and type, never the address or content.
+      console.log(
+        `Notification email skipped (${claimed.type}, ${claimed._id}): recipient inactive or has no usable address`
+      );
       return;
     }
 
@@ -315,6 +320,10 @@ const dispatchNotificationEmail = async (notificationId) => {
     // Resolves only when SMTP accepts the message; "sent" is never
     // written before that happens.
     await emailService.sendEmail(email);
+
+    // Server-side trace so production logs show real deliveries: id and
+    // type only - never the recipient address or message content.
+    console.log(`Notification email delivered (${claimed.type}, ${claimed._id})`);
 
     try {
       await Notification.updateOne(
