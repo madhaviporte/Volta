@@ -5,6 +5,10 @@ const Task = require("../models/Task");
 const { isValidId } = require("../utils/validation");
 const { isTaskOverdue, isTaskDueSoon } = require("../utils/deadline");
 const { getAssigneeIds } = require("../utils/assignees");
+const {
+  enqueueNotificationEmail,
+  emailTrackingFields,
+} = require("../utils/notificationEmail");
 
 // ---------- Generating notifications ----------
 
@@ -31,13 +35,19 @@ const createNotificationOnce = async (task, userId, type, message) => {
   }
 
   try {
-    await Notification.create({
+    const created = await Notification.create({
       user: userId,
       task: task._id,
       type: type,
       message: message,
       dedupeKey: `deadline:${task._id}:${userId}:${type}`,
+      // Email tracking is written only when email is enabled; the row is
+      // created BEFORE any email work starts, so Gmail being down can never
+      // affect this in-app notification. Delivery is queued, never awaited.
+      ...emailTrackingFields(),
     });
+
+    enqueueNotificationEmail(created._id);
   } catch (error) {
     // Code 11000 = duplicate key. This can only happen when two
     // generations run at exactly the same moment, so we ignore it.
@@ -67,13 +77,18 @@ const createActivityNotification = async ({ user, task, type, message, dedupeKey
   }
 
   try {
-    await Notification.create({
+    const created = await Notification.create({
       user: user,
       task: task ? task._id : null,
       type: type,
       message: message,
       dedupeKey: dedupeKey,
+      // Same contract as above: in-app row first, email queued after and
+      // never awaited by the calling request handler.
+      ...emailTrackingFields(),
     });
+
+    enqueueNotificationEmail(created._id);
   } catch (error) {
     // Code 11000 = duplicate key: two identical actions raced; one row is enough
     if (error.code !== 11000) {

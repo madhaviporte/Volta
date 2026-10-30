@@ -69,6 +69,46 @@ const notificationSchema = new mongoose.Schema(
     dedupeKey: {
       type: String,
     },
+
+    // ---------- Email delivery tracking (optional, additive) ----------
+    // Written only when email is enabled at the moment the notification is
+    // created, so documents created before the integration (or while email
+    // is disabled) simply have no email fields and are never picked up by
+    // the email paths. States:
+    //   "pending"  - queued, no delivery attempt has happened yet
+    //   "sending"  - exactly one attempt owns the row right now (atomic
+    //                claim, which is what prevents concurrent duplicate sends)
+    //   "sent"     - SMTP accepted the message; only set AFTER delivery
+    //   "failed"   - the attempt threw; distinguishable from "sent" and
+    //                retried by the scheduled job until emailAttempts hits
+    //                the limit, so retries can never run forever
+    //   "skipped"  - recipient inactive or has no usable address; never
+    //                retried
+    emailStatus: {
+      type: String,
+      enum: ["pending", "sending", "sent", "failed", "skipped"],
+    },
+
+    // How many delivery attempts have been claimed for this row
+    emailAttempts: {
+      type: Number,
+    },
+
+    // Set only after SMTP reported success
+    emailSentAt: {
+      type: Date,
+    },
+
+    // When the current/last attempt claimed the row (used to recover rows
+    // left in "sending" by a crashed process)
+    emailLastAttemptAt: {
+      type: Date,
+    },
+
+    // Short, credential-free failure summary for server-side diagnosis
+    emailLastError: {
+      type: String,
+    },
   },
   {
     timestamps: true, // gives createdAt automatically
@@ -83,5 +123,8 @@ notificationSchema.index({ dedupeKey: 1 }, { unique: true, sparse: true });
 // lives on dedupeKey, which is per-action, so repeated activity on the
 // same task can create its own notifications.)
 notificationSchema.index({ task: 1, type: 1, user: 1 });
+
+// Supporting index for the scheduled email retry scan (emailStatus queries).
+notificationSchema.index({ emailStatus: 1 });
 
 module.exports = mongoose.model("Notification", notificationSchema);

@@ -91,6 +91,11 @@ const startServer = async (extraEnv = {}) => {
       JWT_EXPIRES_IN: "1h",
       LOGIN_RATE_LIMIT: "1000",
       NODE_ENV: "test",
+      // Outgoing email is OFF by default for every spawned test server,
+      // even when the developer's .env carries real SMTP settings: the
+      // suite must never attempt real delivery. Email tests opt in
+      // explicitly through extraEnv (pointing SMTP at a local stub).
+      EMAIL_ENABLED: "false",
       ...extraEnv,
     },
     stdio: ["ignore", "pipe", "pipe"],

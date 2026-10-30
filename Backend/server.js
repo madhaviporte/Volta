@@ -15,7 +15,13 @@ const {
   generateDeadlineNotifications,
 } = require("./src/controllers/notificationController");
 const Notification = require("./src/models/Notification");
-
+const {
+  verifyEmailConnection,
+  isEmailEnabled,
+} = require("./src/utils/emailService");
+const {
+  retryFailedNotificationEmails,
+} = require("./src/utils/notificationEmail");
 // Required configuration must be present or the server refuses to start.
 // Only variable NAMES are printed, never their values.
 const REQUIRED_ENV = ["MONGO_URI", "JWT_SECRET"];
@@ -156,9 +162,23 @@ const start = async () => {
     console.log(`Server running on port ${PORT}`);
   });
 
+  // Verify the SMTP connection once at startup (informational only -
+  // skipped entirely when email is disabled or unconfigured, so an
+  // environment without SMTP behaves exactly as before).
+  if (isEmailEnabled()) {
+    verifyEmailConnection();
+  }
+
   // Deadline/overdue reminders run once at startup, then every 6 hours.
-  generateDeadlineNotifications();
-  setInterval(generateDeadlineNotifications, 6 * 60 * 60 * 1000);
+  // The same cadence retries any notification email whose SMTP delivery
+  // failed (bounded: capped attempts, capped batch - no extra timers).
+  const runScheduledJobs = () => {
+    generateDeadlineNotifications();
+    retryFailedNotificationEmails();
+  };
+
+  runScheduledJobs();
+  setInterval(runScheduledJobs, 6 * 60 * 60 * 1000);
 };
 
 start();
