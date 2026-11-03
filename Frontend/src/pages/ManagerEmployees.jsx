@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Users,
   UserPlus,
   UserCheck,
   UserX,
   Edit,
+  Trash2,
+  Eye,
+  EyeOff,
+  X,
   CheckCircle2,
   XCircle,
   AlertCircle,
@@ -83,6 +88,7 @@ const ManagerEmployees = () => {
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const [formData, setFormData] = useState(emptyForm);
 
@@ -94,7 +100,14 @@ const ManagerEmployees = () => {
     department: "",
     designation: "",
     role: "employee",
+    password: "",
+    confirmPassword: "",
   });
+
+  // Each password field has its own visibility flag, so showing one never
+  // reveals the other.
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // A manager may edit their own details, but the backend refuses a self
   // role change (it would allow demoting the last manager), so that one
@@ -159,7 +172,16 @@ const ManagerEmployees = () => {
       department: user.department || "",
       designation: user.designation || "",
       role: user.role || "employee",
+      // Password fields always start blank: the current password is
+      // hashed and can never be read back, so it is only replaced when
+      // the manager types a new one.
+      password: "",
+      confirmPassword: "",
     });
+
+    // A reopened form always starts with both passwords hidden
+    setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const handleEditChange = (e) => {
@@ -173,17 +195,57 @@ const ManagerEmployees = () => {
   // Changing "Role" here is what promotes or demotes the account; the
   // backend re-checks authorization on every request, so the new role
   // applies from the next request onwards.
+  //
+  // Password management happens in this same form: leaving both password
+  // fields blank keeps the current password untouched, while filling them
+  // in sends the new value to the same PUT endpoint, where it is hashed.
   const handleUpdateUser = async (e) => {
     e.preventDefault();
 
     if (saving) return;
 
+    const newPassword = editFormData.password;
+    const confirmation = editFormData.confirmPassword;
+
+    // Checked before any request so a typo never replaces a password.
+    if (newPassword || confirmation) {
+      if (newPassword.length < 6) {
+        setMessage("New password must be at least 6 characters");
+        return;
+      }
+
+      if (newPassword !== confirmation) {
+        setMessage("Passwords do not match");
+        return;
+      }
+    }
+
     setSaving(true);
 
     try {
-      await api.put(`/users/${editingId}`, editFormData);
+      // Blank password fields mean "no change": they are simply left out
+      // of the request, so the backend keeps the existing hash (it only
+      // hashes a password that was actually sent).
+      const payload = {
+        name: editFormData.name,
+        email: editFormData.email,
+        department: editFormData.department,
+        designation: editFormData.designation,
+        role: editFormData.role,
+      };
 
-      setMessage(`User updated: ${editFormData.name}`);
+      if (newPassword) {
+        payload.password = newPassword;
+        payload.confirmPassword = confirmation;
+      }
+
+      await api.put(`/users/${editingId}`, payload);
+
+      setMessage(
+        newPassword
+          ? `User updated and password changed: ${editFormData.name}`
+          : `User updated: ${editFormData.name}`
+      );
 
       setEditingId(null);
       loadUsers();
@@ -212,6 +274,73 @@ const ManagerEmployees = () => {
     }
   };
 
+  // While the popup is open the page behind it must not scroll. The
+  // previous value is restored on close so the directory keeps scrolling
+  // normally afterwards.
+  useEffect(() => {
+    if (!editingId) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [editingId]);
+
+  // Escape closes the popup, like the X button and Cancel. A save already
+  // in flight is never interrupted.
+  useEffect(() => {
+    if (!editingId) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && !saving) {
+        setEditingId(null);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [editingId, saving]);
+
+  // One close path for the X button, Cancel, Escape and a backdrop press.
+  const closeEdit = () => {
+    if (saving) return;
+    setEditingId(null);
+  };
+
+  // Deletes an employee account after an explicit confirmation. The
+  // backend re-checks every rule (employees only, never yourself), so
+  // this button is only a convenience, not the security boundary.
+  const handleDeleteUser = async (user) => {
+    if (deletingId) return;
+
+    const confirmed = window.confirm(
+      `Delete ${user.name}'s account? This cannot be undone. Their assigned tasks are handed over, and their comments and notifications are removed.`
+    );
+    if (!confirmed) return;
+
+    setDeletingId(user._id);
+
+    try {
+      await api.delete(`/users/${user._id}`);
+
+      setMessage(`Employee deleted: ${user.name}`);
+
+      // Close the edit form if it was showing the deleted account
+      if (editingId === user._id) {
+        setEditingId(null);
+      }
+
+      loadUsers();
+    } catch (error) {
+      setMessage(error.response?.data?.message || "Could not delete account");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="app-layout">
       <Navbar />
@@ -231,7 +360,9 @@ const ManagerEmployees = () => {
           <div
             className={`alert-banner ${
               message.toLowerCase().includes("created") ||
-              message.toLowerCase().includes("updated")
+              message.toLowerCase().includes("updated") ||
+              message.toLowerCase().includes("deleted") ||
+              message.toLowerCase().includes("temporary password")
                 ? "success"
                 : "error"
             }`}
@@ -354,118 +485,246 @@ const ManagerEmployees = () => {
           </form>
         </div>
 
-        {/* Edit account form, shown only while editing a user */}
-        {editingId && (
-          <div className="form-card" style={{ border: "2px solid var(--primary)" }}>
-            <div className="form-title" style={{ color: "var(--primary)" }}>
-              <Edit size={18} />
-              <span>Edit User</span>
-            </div>
+        {/* Edit account popup: centred above the page with a dimmed, blurred
+            backdrop. Only the popup body scrolls, and the page behind it is
+            locked while it is open (see the effect above). */}
+        {editingId &&
+          createPortal(
+            <div
+              className="modal-backdrop"
+              onMouseDown={(event) => {
+                // Only a press on the backdrop itself closes the popup, so
+                // dragging a selection out of a field does not.
+                if (event.target === event.currentTarget) {
+                  closeEdit();
+                }
+              }}
+            >
+              <div
+                className="modal-panel"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="edit-user-title"
+              >
+                <div className="modal-header">
+                  <div className="modal-title-group">
+                    <Edit size={18} />
+                    <h2 id="edit-user-title">Edit User</h2>
+                  </div>
 
-            <form onSubmit={handleUpdateUser}>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Full Name *</label>
-                  <input
-                    name="name"
-                    className="form-control"
-                    value={editFormData.name}
-                    onChange={handleEditChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Email Address *</label>
-                  <input
-                    type="email"
-                    name="email"
-                    className="form-control"
-                    value={editFormData.email}
-                    onChange={handleEditChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Role</label>
-                  <select
-                    name="role"
-                    className="form-control"
-                    value={editFormData.role}
-                    onChange={handleEditChange}
-                    disabled={editingId === currentUserId}
-                    title={
-                      editingId === currentUserId
-                        ? "You cannot change your own role"
-                        : undefined
-                    }
+                  <button
+                    type="button"
+                    className="modal-close"
+                    onClick={closeEdit}
+                    disabled={saving}
+                    aria-label="Close edit form"
                   >
-                    {ROLES.map((role) => (
-                      <option key={role.value} value={role.value}>
-                        {role.label}
-                      </option>
-                    ))}
-                  </select>
+                    <X size={18} />
+                  </button>
                 </div>
 
-                <div className="form-group">
-                  <label>Department</label>
-                  <select
-                    name="department"
-                    className="form-control"
-                    value={editFormData.department}
-                    onChange={handleEditChange}
-                  >
-                    <option value="">Not set</option>
-                    {optionsWith(DEPARTMENTS, editFormData.department).map(
-                      (department) => (
-                        <option key={department} value={department}>
-                          {department}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </div>
+                <form className="modal-form" onSubmit={handleUpdateUser}>
+                  <div className="modal-body">
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>Full Name *</label>
+                        <input
+                          name="name"
+                          className="form-control"
+                          value={editFormData.name}
+                          onChange={handleEditChange}
+                          required
+                        />
+                      </div>
 
-                <div className="form-group">
-                  <label>Designation</label>
-                  <select
-                    name="designation"
-                    className="form-control"
-                    value={editFormData.designation}
-                    onChange={handleEditChange}
-                  >
-                    <option value="">Not set</option>
-                    {optionsWith(DESIGNATIONS, editFormData.designation).map(
-                      (designation) => (
-                        <option key={designation} value={designation}>
-                          {designation}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </div>
+                      <div className="form-group">
+                        <label>Email Address *</label>
+                        <input
+                          type="email"
+                          name="email"
+                          className="form-control"
+                          value={editFormData.email}
+                          onChange={handleEditChange}
+                          required
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>Role</label>
+                        <select
+                          name="role"
+                          className="form-control"
+                          value={editFormData.role}
+                          onChange={handleEditChange}
+                          disabled={editingId === currentUserId}
+                          title={
+                            editingId === currentUserId
+                              ? "You cannot change your own role"
+                              : undefined
+                          }
+                        >
+                          {ROLES.map((role) => (
+                            <option key={role.value} value={role.value}>
+                              {role.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="form-group">
+                        <label>Department</label>
+                        <select
+                          name="department"
+                          className="form-control"
+                          value={editFormData.department}
+                          onChange={handleEditChange}
+                        >
+                          <option value="">Not set</option>
+                          {optionsWith(DEPARTMENTS, editFormData.department).map(
+                            (department) => (
+                              <option key={department} value={department}>
+                                {department}
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </div>
+
+                      <div className="form-group">
+                        <label>Designation</label>
+                        <select
+                          name="designation"
+                          className="form-control"
+                          value={editFormData.designation}
+                          onChange={handleEditChange}
+                        >
+                          <option value="">Not set</option>
+                          {optionsWith(
+                            DESIGNATIONS,
+                            editFormData.designation
+                          ).map((designation) => (
+                            <option key={designation} value={designation}>
+                              {designation}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Password management lives here so one save handles
+                          the whole account. Both fields stay blank by
+                          default: the current password is hashed and cannot
+                          be displayed, it is only replaced when a new one is
+                          typed. Each field has its own show/hide toggle. */}
+                      <div className="form-group">
+                        <label>New Password</label>
+                        <div className="password-field">
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            name="password"
+                            className="form-control"
+                            placeholder="Leave blank to keep current password"
+                            value={editFormData.password}
+                            onChange={handleEditChange}
+                            autoComplete="new-password"
+                          />
+                          <button
+                            type="button"
+                            className="password-toggle"
+                            onClick={() =>
+                              setShowPassword((visible) => !visible)
+                            }
+                            aria-label={
+                              showPassword
+                                ? "Hide new password"
+                                : "Show new password"
+                            }
+                            aria-pressed={showPassword}
+                            title={
+                              showPassword ? "Hide password" : "Show password"
+                            }
+                          >
+                            {showPassword ? (
+                              <EyeOff size={16} />
+                            ) : (
+                              <Eye size={16} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="form-group">
+                        <label>Confirm Password</label>
+                        <div className="password-field">
+                          <input
+                            type={showConfirmPassword ? "text" : "password"}
+                            name="confirmPassword"
+                            className="form-control"
+                            placeholder="Repeat the new password"
+                            value={editFormData.confirmPassword}
+                            onChange={handleEditChange}
+                            autoComplete="new-password"
+                          />
+                          <button
+                            type="button"
+                            className="password-toggle"
+                            onClick={() =>
+                              setShowConfirmPassword((visible) => !visible)
+                            }
+                            aria-label={
+                              showConfirmPassword
+                                ? "Hide confirmation password"
+                                : "Show confirmation password"
+                            }
+                            aria-pressed={showConfirmPassword}
+                            title={
+                              showConfirmPassword
+                                ? "Hide password"
+                                : "Show password"
+                            }
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff size={16} />
+                            ) : (
+                              <Eye size={16} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="description-hint">
+                      Leave both password fields blank to keep the current
+                      password. A new password must be at least 6 characters
+                      and replaces the old one immediately.
+                    </p>
+                  </div>
+
+                  <div className="modal-footer">
+                    <div className="form-actions">
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={saving}
+                      >
+                        <CheckCircle2 size={16} />
+                        <span>{saving ? "Saving..." : "Save Changes"}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={closeEdit}
+                        disabled={saving}
+                      >
+                        <XCircle size={16} />
+                        <span>Cancel</span>
+                      </button>
+                    </div>
+                  </div>
+                </form>
               </div>
-
-              <div className="form-actions">
-                <button type="submit" className="btn btn-primary" disabled={saving}>
-                  <CheckCircle2 size={16} />
-                  <span>{saving ? "Saving..." : "Save Changes"}</span>
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setEditingId(null)}
-                  disabled={saving}
-                >
-                  <XCircle size={16} />
-                  <span>Cancel</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
+            </div>,
+            document.body
+          )}
 
         {/* All Users Directory */}
         <div className="card-section">
@@ -539,6 +798,25 @@ const ManagerEmployees = () => {
                               </>
                             )}
                           </button>
+
+                          {/* Delete is hidden for the logged-in account:
+                              the backend refuses self-deletion anyway, and
+                              manager accounts are refused there as well. */}
+                          {user._id !== currentUserId && (
+                            <button
+                              type="button"
+                              className="btn btn-danger btn-sm"
+                              onClick={() => handleDeleteUser(user)}
+                              disabled={deletingId !== null}
+                            >
+                              <Trash2 size={12} />
+                              <span>
+                                {deletingId === user._id
+                                  ? "Deleting..."
+                                  : "Delete"}
+                              </span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

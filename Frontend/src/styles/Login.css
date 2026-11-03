@@ -49,6 +49,20 @@
   margin-top: 4px;
 }
 
+/* Field-level message under an invalid login input (Login.jsx). */
+.field-error {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--alert-error-text);
+}
+
+/* An input carrying a field-level error is tinted like the error banner so
+   the message is visibly tied to its field. */
+.login-card .form-control[aria-invalid="true"] {
+  border-color: var(--alert-error-border);
+}
+
 @media (max-width: 480px) {
   /* Login card keeps comfortable margins on the narrowest phones */
   .login-page-container {

@@ -1,0 +1,200 @@
+/* Modal.css — the centred popup used by the Edit User form
+   (src/pages/ManagerEmployees.jsx).
+
+   Layout: the backdrop fills the viewport and centres the panel. The panel
+   is a flex column capped to the viewport height, the header stays put and
+   only .modal-body scrolls, so every field stays reachable on short screens
+   without the page behind it moving. */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 24px;
+
+  /* Slightly darker page + blurred background behind the popup */
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.modal-panel {
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+  max-width: 720px;
+  max-height: calc(100vh - 48px);
+
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
+
+  overflow: hidden; /* the body scrolls, the rounded corners stay clean */
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 16px 20px;
+
+  border-bottom: 1px solid var(--border-color);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--primary);
+}
+
+.modal-title-group h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+}
+
+.modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.modal-close:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text-main);
+}
+
+.modal-close:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.modal-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The form itself never scrolls: only .modal-body does. */
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* lets the body shrink inside the flex column */
+  flex: 1;
+}
+
+.modal-body {
+  padding: 20px;
+  overflow-y: auto; /* long forms scroll inside the popup */
+  overscroll-behavior: contain; /* wheel stays inside the modal */
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 16px 20px;
+
+  border-top: 1px solid var(--border-color);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.modal-footer .form-actions {
+  margin: 0;
+}
+
+/* ---------- Password fields with a show/hide toggle ---------- */
+
+.password-field {
+  position: relative;
+}
+
+.password-field .form-control {
+  /* Room for the toggle so long values never run under the icon */
+  padding-right: 44px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 32px;
+  height: 32px;
+
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.password-toggle:hover {
+  color: var(--text-main);
+  background: var(--surface-hover);
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 1px;
+}
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 640px) {
+  .modal-backdrop {
+    padding: 12px;
+    align-items: flex-end; /* panel uses the full width, anchored low */
+  }
+
+  .modal-panel {
+    max-width: none;
+    max-height: calc(100vh - 24px);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .modal-footer .form-actions {
+    flex-wrap: wrap;
+  }
+}

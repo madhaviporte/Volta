@@ -4,12 +4,18 @@ import { Zap, Mail, Lock, LogIn, AlertCircle } from "lucide-react";
 import api, { resetSessionExpired } from "../services/api";
 import { getSessionUser, hasValidSession, homePathFor } from "../services/auth";
 
+// Basic shape check only. The server remains the authority on whether an
+// account exists and whether the password is right; this just catches
+// typos before a request is made.
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const Login = () => {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({ email: "", password: "" });
   const [submitting, setSubmitting] = useState(false);
 
   // Already logged in (e.g. the browser Back button returned here, or the
@@ -26,11 +32,34 @@ const Login = () => {
     // One login request at a time
     if (submitting) return;
 
+    // Field-level checks first: an empty or malformed value is described
+    // precisely and never becomes a generic "wrong credentials" answer.
+    const trimmedEmail = email.trim();
+    const nextErrors = { email: "", password: "" };
+
+    if (!trimmedEmail) {
+      nextErrors.email = "Enter your email address.";
+    } else if (!EMAIL_PATTERN.test(trimmedEmail)) {
+      nextErrors.email =
+        "Enter a valid email address, e.g. name@company.com.";
+    }
+
+    if (!password) {
+      nextErrors.password = "Enter your password.";
+    }
+
+    setFieldErrors(nextErrors);
+
+    if (nextErrors.email || nextErrors.password) {
+      setMessage("");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
       const response = await api.post("/auth/login", {
-        email,
+        email: trimmedEmail,
         password,
       });
 
@@ -49,9 +78,31 @@ const Login = () => {
       // an external page), not to the login form.
       navigate(homePathFor(response.data.user), { replace: true });
     } catch (error) {
-      setMessage(
-        error.response?.data?.message || "Login failed"
-      );
+      const status = error.response?.status;
+      const serverMessage = error.response?.data?.message;
+
+      // The backend answers the two rejected-credential cases separately
+      // (unknown address vs. wrong password), so its message is shown as-is:
+      //   "Email address is incorrect or not registered."
+      //   "Incorrect password. Please try again."
+      // This deliberately reveals whether an address has an account - an
+      // accepted trade-off for this internal tool, documented in
+      // Backend/src/controllers/authController.js.
+      if (status === 400 || status === 401) {
+        setMessage(
+          serverMessage ||
+            "Sign-in failed. Please check your email address and password."
+        );
+      } else if (status === 403) {
+        setMessage(
+          serverMessage || "This account is inactive. Contact your manager."
+        );
+      } else {
+        setMessage(
+          serverMessage ||
+            "Login failed. Please check your connection and try again."
+        );
+      }
     } finally {
       setSubmitting(false);
     }
@@ -75,7 +126,9 @@ const Login = () => {
           </div>
         )}
 
-        <form onSubmit={handleLogin}>
+        {/* noValidate: the messages below are shown in the card itself,
+            consistently in every browser, instead of native tooltips. */}
+        <form onSubmit={handleLogin} noValidate>
           <div className="form-group">
             <label>Email Address</label>
             <div style={{ position: "relative" }}>
@@ -84,8 +137,18 @@ const Login = () => {
                 className="form-control"
                 placeholder="name@company.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  // Clear the message as soon as the manager corrects it
+                  if (fieldErrors.email) {
+                    setFieldErrors((current) => ({ ...current, email: "" }));
+                  }
+                }}
                 required
+                aria-invalid={Boolean(fieldErrors.email)}
+                aria-describedby={
+                  fieldErrors.email ? "login-email-error" : undefined
+                }
                 style={{ paddingLeft: "36px" }}
               />
               <Mail
@@ -99,6 +162,11 @@ const Login = () => {
                 }}
               />
             </div>
+            {fieldErrors.email && (
+              <p className="field-error" id="login-email-error">
+                {fieldErrors.email}
+              </p>
+            )}
           </div>
 
           <div className="form-group">
@@ -109,8 +177,17 @@ const Login = () => {
                 className="form-control"
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (fieldErrors.password) {
+                    setFieldErrors((current) => ({ ...current, password: "" }));
+                  }
+                }}
                 required
+                aria-invalid={Boolean(fieldErrors.password)}
+                aria-describedby={
+                  fieldErrors.password ? "login-password-error" : undefined
+                }
                 style={{ paddingLeft: "36px" }}
               />
               <Lock
@@ -124,6 +201,11 @@ const Login = () => {
                 }}
               />
             </div>
+            {fieldErrors.password && (
+              <p className="field-error" id="login-password-error">
+                {fieldErrors.password}
+              </p>
+            )}
           </div>
 
           <button

@@ -27,6 +27,7 @@ import "./styles/shared/Cards.css";
 import "./styles/shared/Tables.css";
 import "./styles/shared/Badges.css";
 import "./styles/shared/StatCards.css";
+import "./styles/shared/Modal.css";
 import "./styles/Navbar.css";
 import "./styles/Login.css";
 import "./styles/NotificationBell.css";
