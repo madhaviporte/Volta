@@ -2,269 +2,302 @@
 
 ## About the Project
 
-Volta is a web-based Task Management System that helps managers assign work to employees and keep track of their progress.
+Volta is a web-based task management system built to make it easier for managers and employees to manage daily work.
 
-In a team, it can sometimes be difficult to manage tasks, remember deadlines, check work status, and keep everyone updated. Volta provides one place where managers and employees can manage their tasks and stay informed about updates.
+In a team, keeping track of assigned tasks, deadlines, work progress, and meeting updates can become difficult when everything is handled separately. Volta brings these activities together in one place.
 
-The website has two types of users: **Manager** and **Employee**. Both have different access and dashboards according to their roles.
+The application has two types of users: **Manager** and **Employee**. Each user has a separate dashboard with access based on their role.
 
-The manager can create and assign tasks, check employee progress, manage meetings, and receive notifications. Employees can view their assigned tasks, update their work status, add comments, and check meeting details.
+Managers can manage employee accounts, create and assign tasks, track progress, manage meetings, and receive updates. Employees can view their assigned tasks, update their work status, add comments, and check meeting information.
 
-The main aim of this project is to make everyday task management easier and more organized.
+The main goal of Volta is to make task management simple and keep managers and employees updated about their work.
+
+## Live Project
+
+- **Frontend:** https://volta-indol.vercel.app
+- **Backend:** https://volta-vh57.onrender.com
 
 ## Main Features
 
 ### 1. Login and Authentication
 
-Volta has a login system for managers and employees.
-
-- Users can log in using their account credentials.
-- Passwords are protected using password hashing.
+- Separate login access for managers and employees.
+- Passwords are hashed before being stored.
 - JWT authentication is used to manage user sessions.
-- Different access permissions are provided for managers and employees.
-- Protected pages require a valid login.
-- Users can log out of their accounts.
+- Protected routes prevent unauthorized access.
+- Role-based permissions control which features users can access.
+- Users can log out securely.
 
 ### 2. Manager Dashboard
 
-The manager dashboard provides an overview of the tasks and employees.
+The manager dashboard provides an overview of employees and their assigned tasks.
 
 Managers can:
 
-- View task-related statistics.
-- Create new tasks.
-- Assign tasks to employees.
-- Edit existing tasks.
-- Change task assignments when required.
+- View task statistics and employee progress.
+- Create, edit, assign, reassign, and delete tasks.
 - Set task priorities and deadlines.
-- Add task descriptions and relevant details.
-- Check task status and employee progress.
+- Add task descriptions and instructions.
 - View employee information.
-- Delete tasks when they are no longer required.
-
-This helps managers organize work and monitor assigned tasks from one place.
+- Track task status and completion.
+- Manage employee accounts.
+- View task history and notifications.
 
 ### 3. Employee Dashboard
 
-Employees have a separate dashboard based on their role.
+Employees have a separate dashboard where they can manage their assigned work.
 
 Employees can:
 
-- View the tasks assigned to them.
-- Read task descriptions and other details.
-- Check task priorities and deadlines.
-- Update the status of their tasks.
+- View their assigned tasks.
+- Check task descriptions, priorities, and deadlines.
+- Update task status.
 - Add comments to tasks.
-- View relevant task history and updates.
+- View task history and updates.
 - Check upcoming and overdue tasks.
-- View meeting information and notifications.
+- View meeting details and notifications.
 
-Employees cannot access the manager's dashboard or manage other employees' tasks through the normal application permissions.
+Employees can access only their own task-related information through the application's role-based permissions.
 
-### 4. Task Management
+### 4. Employee Management
 
-Task management is the main feature of Volta.
+Managers can manage employee accounts from the Employee Management section.
 
-Each task contains relevant information such as its title, description, assigned employee, priority, due date, and current status.
+- Create employee accounts.
+- Edit employee details.
+- Update an employee's password.
+- Reset passwords when required.
+- Delete employee accounts.
 
-Managers can create, assign, edit, reassign, and delete tasks. When a task is assigned, the employee can see the task details on their dashboard.
+Employees cannot change their own passwords through the employee dashboard.
 
-The task data is stored in the database, so saved changes remain available after refreshing the page.
+### 5. Task Management
 
-### 5. Task Status Tracking
+Task management is the main part of Volta.
 
-Employees can update the status of their assigned tasks as work progresses.
+Each task contains information such as its title, description, assigned employee, priority, due date, and current status.
+
+Managers can create and assign tasks, make changes when required, and track their progress. Employees can view their tasks and update their status.
+
+Task information is stored in MongoDB, so saved changes remain available after refreshing the application.
+
+### 6. Task Status Tracking
+
+Employees can update the status of their tasks as work progresses.
 
 The available statuses are:
 
-- **Pending:** The task has not been started yet.
-- **In Progress:** The employee is currently working on the task.
-- **Completed:** The task has been completed.
-- **On Hold:** Work on the task is temporarily paused.
+- **Pending:** Work has not started yet.
+- **In Progress:** The employee is working on the task.
+- **Completed:** The task has been finished.
+- **On Hold:** Work is temporarily paused.
 
-Managers can check the current status of tasks and track their progress through the dashboard.
+Managers can check these statuses from their dashboard.
 
-### 6. Task Comments and History
+### 7. Task Comments and History
 
-Employees can add comments to share updates or provide information about their work.
+Employees can add comments to share work updates or provide additional information.
 
-Volta also maintains task activity history for supported actions. For example, the history can show when a task was created or assigned.
+Volta also keeps a record of supported task activities, such as task creation and assignment.
 
-This makes it easier to understand what happened to a task and check important changes without relying only on verbal updates.
+This helps managers and employees understand the changes made to a task.
 
-### 7. Upcoming and Overdue Tasks
+### 8. Upcoming and Overdue Tasks
 
-Volta displays task information based on deadlines.
+Volta uses task deadlines to help users keep track of their work.
 
-- Upcoming tasks help users identify work that is due soon.
-- Overdue tasks help users identify work that has passed its deadline.
-- Task status and deadlines help managers monitor pending work.
+- Upcoming tasks show work that is due soon.
+- Overdue tasks help identify tasks that have passed their deadlines.
+- Task status and due dates make it easier to monitor pending work.
 
-These features make it easier to keep track of deadlines and prioritize work.
+### 9. Notifications and Email Updates
 
-### 8. Notifications
+Volta includes an in-app notification system for important task and meeting activities.
 
-Volta includes notifications for important task and meeting activities.
+Users can receive notifications for events such as:
 
-Notifications can inform users about events such as:
+- Task assignment and reassignment.
+- Task status changes.
+- New task comments.
+- Task completion.
+- Meeting updates.
 
-- A task being assigned or reassigned.
-- An employee updating a task's status.
-- A task comment being added.
-- A task being completed.
-- Meeting-related updates.
+The notification section keeps track of unread notifications and updates the unread count when notifications are read.
 
-Users can open notifications to view the relevant information. The notification interface also tracks unread notifications and updates the unread count when notifications are read.
+The application also supports email notifications for important updates, including task assignments and deadline reminders.
 
-This helps managers and employees stay informed about important changes.
+**Email integration includes:**
 
-### 9. Meeting Management
+- Gmail API integration using OAuth 2.0.
+- Automatic access token refresh.
+- SMTP support as an alternative email provider.
+- Email error handling so that an email failure does not stop the main task or notification operation.
 
-Volta includes a meeting section that is available to managers and employees.
+### 10. Meeting Management
 
-Users can view meeting information, including details such as the meeting title, date, time, description, and meeting link when provided.
+Volta has a meeting section that is available to both managers and employees.
 
-Managers can create and update meeting details. Employees can view the updated information and use the meeting link to join when available.
+Managers can create and update meeting information, including:
 
-Meeting-related notifications help users stay informed about meeting updates.
+- Meeting title.
+- Date and time.
+- Agenda and details.
+- Participants.
+- Meeting status.
+- Meeting summary and action items.
 
-### 10. Responsive Design
+Employees can view the meeting information and stay updated when meeting details change.
 
-The website is designed to work on different screen sizes, including:
+### 11. Manager Profile
 
-- Mobile phones
-- Tablets
-- Laptops
-- Desktop computers
+Managers can update their own account information and change their password from the profile settings.
 
-The main dashboard, task views, meetings, and notifications were checked at different screen sizes to ensure that the important information remains accessible.
+### 12. Dark and Light Mode
 
-### 11. Theme and Navigation
+Volta supports both dark and light themes.
 
-Volta supports dark and light themes.
+Users can switch between the two themes. The selected theme is saved and remains active after refreshing the page.
 
-Users can switch between the available themes, and the selected theme is saved so it can remain selected after refreshing the page.
+### 13. Responsive Design
 
-The website also supports normal browser navigation, including the Back and Forward buttons. Protected pages and login sessions are handled according to the user's authentication state.
+The application is designed to work on different screen sizes, including:
+
+- Mobile phones.
+- Tablets.
+- Laptops.
+- Desktop computers.
+
+The dashboards, task sections, meetings, and notifications have been checked on different screen sizes.
 
 ## Technology Stack
 
-The project uses the MERN stack.
-
 | Technology | Purpose |
 |---|---|
-| MongoDB | Stores users, tasks, and related application data. |
+| MongoDB | Stores users, tasks, meetings, and related data. |
 | Express.js | Handles backend routes and API requests. |
-| React.js | Builds the website interface and dashboards. |
+| React.js | Builds the frontend and dashboards. |
 | Node.js | Runs the backend application. |
 | JWT | Handles authentication and protected access. |
-| bcrypt | Hashes passwords before storing them. |
-| REST APIs | Connects the frontend with the backend. |
+| bcrypt | Hashes user passwords. |
+| REST APIs | Connects the frontend and backend. |
+| Gmail API | Sends email notifications. |
+| OAuth 2.0 | Handles Gmail API authorization. |
+| CSS | Handles styling and responsive layouts. |
 
 ## How the Project Works
 
-The basic working flow of Volta is:
-
-1. A user opens the website and logs in.
-2. The system identifies the user's role.
-3. The manager gets access to management features, while the employee gets access to their own task-related features.
+1. A user opens the website and logs in using their credentials.
+2. The system checks the user's role.
+3. The manager gets access to management features, while the employee gets access to their assigned tasks.
 4. The manager creates a task and assigns it to an employee.
 5. The employee views the task and updates its status or adds comments.
-6. The system saves the changes in the database.
-7. Managers can check task progress and relevant activity history.
-8. Notifications keep users informed about important updates.
-9. Both roles can view relevant meeting information.
+6. The application saves the changes in MongoDB.
+7. The manager can track task progress and view task history.
+8. Notifications and email updates keep users informed about important activities.
+9. Both managers and employees can view meeting information.
 
 ## Project Structure
 
-The project is organized into frontend and backend parts.
+The project is divided into three main parts:
 
 ### Frontend
 
-The frontend contains the React application. It is responsible for displaying the login page, dashboards, task information, meetings, notifications, and other user interface elements.
-
-It communicates with the backend through API requests.
+The frontend is built with React and Vite. It contains the login page, manager and employee dashboards, task sections, employee management, meetings, notifications, and theme settings.
 
 ### Backend
 
-The backend is built with Node.js and Express.js. It handles authentication, user roles, task operations, meeting-related operations, notifications, and other application logic.
+The backend is built with Node.js and Express.js. It handles authentication, role-based access, employee management, task operations, meetings, notifications, and email services.
 
 ### Database
 
-MongoDB stores the application data, including user and task information, along with other data required by the implemented features.
+MongoDB stores user accounts, tasks, meeting information, notifications, comments, and other application data.
 
 ## Running the Project Locally
 
-To run the project on your computer, you need Node.js, npm, and access to a MongoDB database.
+To run Volta locally, you need Node.js, npm, and a MongoDB database.
 
-### 1. Clone the repository
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/madhaviporte/Volta.git
 cd Volta
 ```
 
-### 2. Set up the backend
-
-Open a terminal in the backend folder:
+### 2. Set Up the Backend
 
 ```bash
 cd Backend
 npm install
 ```
 
-Create or configure the `.env` file with the environment variables required by the backend, including the MongoDB connection string, authentication secret, and any other variables used by the application.
+Create a `.env` file using the variables listed in `Backend/.env.example`. Add the required database connection string, JWT secret, and other configuration values.
 
-Start the backend using the project's development script:
+Start the backend:
 
 ```bash
 npm run dev
 ```
 
-### 3. Set up the frontend
+### 3. Set Up the Frontend
 
-Open another terminal in the frontend folder and install its dependencies:
+Open another terminal:
 
 ```bash
+cd Frontend
 npm install
 ```
 
-Configure the frontend's API URL according to the environment variable used in the project. Then start the frontend using its available development script, commonly:
+Create a `.env` file using `Frontend/.env.example` and configure the backend API URL.
+
+Start the frontend:
 
 ```bash
 npm run dev
 ```
 
-The exact frontend folder name and environment variable names should match the existing repository configuration.
+The frontend and backend should now be running locally.
 
 ## Deployment
 
-Volta has been deployed as a live web application. The deployed frontend communicates with the backend, which connects to the configured MongoDB database.
+Volta is deployed as a live web application.
 
-The live deployment was manually checked for login, task management, employee access, notifications, meetings, responsive layouts, and browser navigation.
+- **Frontend:** Hosted on Vercel.
+- **Backend:** Hosted on Render.
+- **Database:** MongoDB Atlas.
+
+The frontend communicates with the deployed backend through REST APIs. Environment variables and email credentials are configured separately in the deployment platforms.
 
 ## Testing
 
-The live website was manually tested for the following areas:
+The project was tested before deployment.
 
-- Manager and employee login and logout.
-- Dashboard access and role-based permissions.
-- Task creation, assignment, editing, and deletion.
-- Task status updates, comments, and activity history.
-- Upcoming and overdue task information.
-- Task and meeting notifications.
-- Notification read status and unread count.
-- Meeting creation, updates, details, and links.
+Testing included:
+
+- Manager and employee login.
+- Role-based access and protected routes.
+- Employee account creation and management.
+- Task creation, assignment, editing, reassignment, and deletion.
+- Task status updates and comments.
+- Task history and deadline tracking.
+- In-app notifications and unread notification count.
+- Email notification delivery.
+- Meeting creation and updates.
+- Manager profile and password updates.
 - Dark and light theme persistence.
-- Responsive layouts on mobile, tablet, and desktop screens.
+- Responsive layouts.
 - Browser Back and Forward navigation.
-- Live deployment and saved data after refresh.
+- Live frontend and backend communication.
 
-All 20 manual tests completed during the final testing process passed.
+**Backend automated tests:** 159 tests passed.
+
+**Frontend:** Production build completed successfully.
+
+**Code quality:** ESLint checks passed.
 
 ## Conclusion
 
-Volta is a task management website built to make team work easier to organize and track. It provides separate access for managers and employees, task assignment, status tracking, comments, activity history, deadline tracking, notifications, and meeting management.
+Volta brings task management, employee management, notifications, and meeting updates together in one application.
 
-By keeping task details and updates in one place, the system helps managers monitor work and allows employees to understand their assigned responsibilities more clearly.
+Managers can assign work and monitor progress, while employees can manage their tasks and share updates. Features like deadline tracking, email notifications, task history, and meeting updates help keep daily work organized.
 
+The project was built using the MERN stack and deployed as a working web application.
