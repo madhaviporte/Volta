@@ -197,6 +197,15 @@ const htmlOf = (message) => {
   return part ? part.content : "";
 };
 
+// The plain-text alternative part, decoded the same way - the task link
+// must be present here too, not only in the HTML button.
+const textOf = (message) => {
+  const part = mimeParts(message.data).find((entry) =>
+    /content-type:\s*text\/plain/i.test(entry.headers)
+  );
+  return part ? part.content : "";
+};
+
 const subjectOf = (message) => {
   const match = message.data.match(/^Subject:[^\r\n]*/im);
   return match ? match[0].replace(/^Subject:\s*/i, "") : "";
@@ -272,6 +281,10 @@ before(async () => {
   // before the first require of emailService (its transporter is built
   // from these values) and before any server is spawned.
   process.env.EMAIL_ENABLED = "true";
+  // Pin the provider so a leftover .env value (e.g. EMAIL_PROVIDER=gmail
+  // or resend from other work) cannot silently disable or reroute the
+  // stubbed SMTP transport this suite depends on.
+  process.env.EMAIL_PROVIDER = "smtp";
   process.env.SMTP_HOST = "127.0.0.1";
   process.env.SMTP_PORT = String(smtp.port);
   process.env.SMTP_USER = "volta-test-user";
@@ -361,6 +374,14 @@ test("one assignee receives exactly one email, the acting manager none", async (
     htmlOf(delivered[0]).includes(`https://volta.example/tasks/${taskId}`),
     "the email links to the real /tasks/:taskId route"
   );
+  assert.ok(
+    textOf(delivered[0]).includes(`https://volta.example/tasks/${taskId}`),
+    "the plain-text part carries the same task link as the HTML button"
+  );
+  assert.ok(
+    htmlOf(delivered[0]).includes("Open task"),
+    "the HTML part renders the Open task button"
+  );
   assert.equal(
     matching(messagesTo(manager.email), title).length,
     0,
@@ -377,6 +398,58 @@ test("one assignee receives exactly one email, the acting manager none", async (
   assert.equal(row.emailStatus, "sent");
   assert.equal(row.emailAttempts, 1);
   assert.ok(row.emailSentAt instanceof Date, "sent timestamp set after delivery");
+});
+
+test("the task link is built from FRONTEND_BASE_URL in both HTML and text parts", () => {
+  const { buildNotificationEmail } = require("../src/utils/notificationEmail");
+  const previous = process.env.FRONTEND_BASE_URL;
+  const taskId = "65f000000000000000000abc";
+  const notification = { type: "task_assigned", message: "You have a new task" };
+  const recipient = { name: "Ada", email: "ada@example.com" };
+  const task = {
+    _id: taskId,
+    title: "Prepare report",
+    priority: "High",
+    dueDate: new Date("2026-11-05"),
+    status: "Pending",
+  };
+
+  try {
+    // A trailing slash in the configured base must not produce "//tasks/"
+    process.env.FRONTEND_BASE_URL = "https://volta.example/";
+    const email = buildNotificationEmail(notification, recipient, task);
+    const url = `https://volta.example/tasks/${taskId}`;
+
+    assert.ok(
+      email.html.includes(`href="${url}"`),
+      `HTML button href is exactly ${url}`
+    );
+    assert.ok(email.html.includes("Open task"), "HTML renders the button");
+    assert.ok(
+      email.text.includes(url),
+      `plain-text part contains ${url}`
+    );
+
+    // Unset base: the email is still built (never breaks a notification)
+    // and simply carries no link - the omission is logged, not fatal.
+    delete process.env.FRONTEND_BASE_URL;
+    const linkless = buildNotificationEmail(notification, recipient, task);
+    assert.ok(
+      !linkless.html.includes("Open task"),
+      "no button is rendered without a base URL"
+    );
+    assert.ok(
+      !linkless.text.includes("/tasks/"),
+      "no link is rendered without a base URL"
+    );
+    assert.ok(linkless.html.includes("Prepare report"), "body still renders");
+  } finally {
+    if (previous === undefined) {
+      delete process.env.FRONTEND_BASE_URL;
+    } else {
+      process.env.FRONTEND_BASE_URL = previous;
+    }
+  }
 });
 
 test("five assignees receive five emails, one each, and nobody else", async () => {

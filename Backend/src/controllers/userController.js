@@ -1,7 +1,12 @@
 const bcrypt = require("bcryptjs");
 
 const User = require("../models/User");
+const Task = require("../models/Task");
+const Comment = require("../models/Comment");
+const Notification = require("../models/Notification");
+const Meeting = require("../models/Meeting");
 const { isValidId, isText, isValidRole } = require("../utils/validation");
+const { deriveOverallStatus } = require("../utils/assignees");
 
 // POST /api/users  (manager only)
 // Managers create employee accounts and additional manager accounts.
@@ -163,7 +168,15 @@ const getUserById = async (req, res) => {
 // immediately - no token reissue needed.
 const updateUser = async (req, res) => {
   try {
-    const { name, email, password, department, designation, role } = req.body;
+    const {
+      name,
+      email,
+      password,
+      confirmPassword,
+      department,
+      designation,
+      role,
+    } = req.body;
 
     // Validate the id and field types before touching the database, so
     // malformed input answers 400 instead of failing inside mongoose (500)
@@ -206,6 +219,18 @@ const updateUser = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Password must be text",
+      });
+    }
+
+    // "New Password" and "Confirm Password" are sent together from the
+    // Edit Employee form. The match is enforced here as well as in the
+    // browser, so a mismatched pair can never reach the hash below.
+    // Omitting both fields (or sending an empty password) means "keep the
+    // current password" and is always accepted.
+    if (confirmPassword !== undefined && confirmPassword !== password) {
+      return res.status(400).json({
+        success: false,
+        message: "Passwords do not match",
       });
     }
 
@@ -373,10 +398,129 @@ const updateUserStatus = async (req, res) => {
   }
 };
 
+// DELETE /api/users/:id  (manager only)
+// Deletes an EMPLOYEE account and tidies every record that pointed at it:
+//   - tasks: the employee is removed from `assignees` and `progress`; a
+//     task whose primary assignee (assignedTo, required by the schema)
+//     was the employee is handed to the first remaining assignee, or to
+//     the deleting manager when nobody is left. Tasks themselves are
+//     never destroyed.
+//   - comments written by the employee are removed with the account
+//   - the employee's own notifications (their inbox) are removed
+//   - meetings: the employee is removed from `participants`
+// Task history is deliberately KEPT: entries reference the user by id
+// and the UI already renders a missing user as "User", so the audit
+// trail survives without crashes. Manager accounts can never be deleted
+// through this endpoint, and nobody can delete their own account.
+const deleteEmployee = async (req, res) => {
+  try {
+    if (!isValidId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user id",
+      });
+    }
+
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Nobody can delete their own account - checked first so the
+    // logged-in manager always gets the precise reason (the role check
+    // below would otherwise catch a self-delete of a manager account
+    // first with the less specific "employee accounts only" message).
+    if (user._id.toString() === req.user._id.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot delete your own account",
+      });
+    }
+
+    if (user.role !== "employee") {
+      return res.status(400).json({
+        success: false,
+        message: "Only employee accounts can be deleted",
+      });
+    }
+
+    const employeeId = user._id;
+    const employeeIdString = employeeId.toString();
+    const managerId = req.user._id;
+
+    // ---- Tasks: unassign the employee, never delete the task ----
+    const tasks = await Task.find({
+      $or: [
+        { assignedTo: employeeId },
+        { assignees: employeeId },
+        { "progress.user": employeeId },
+      ],
+    });
+
+    for (const task of tasks) {
+      task.assignees = (task.assignees || []).filter(
+        (id) => id.toString() !== employeeIdString
+      );
+
+      task.progress = (task.progress || []).filter(
+        (entry) => !entry.user || entry.user.toString() !== employeeIdString
+      );
+
+      if (task.assignedTo && task.assignedTo.toString() === employeeIdString) {
+        // assignedTo is required by the schema, so the task goes to the
+        // first remaining assignee, or to the deleting manager when the
+        // list is empty - the task stays alive and usable either way.
+        task.assignedTo =
+          task.assignees.length > 0 ? task.assignees[0] : managerId;
+      }
+
+      // Keep the overall roll-up consistent with the remaining entries.
+      const overall = deriveOverallStatus(task.progress);
+      if (overall) {
+        task.status = overall;
+      }
+
+      await task.save();
+    }
+
+    // ---- The employee's own records ----
+    await Comment.deleteMany({ user: employeeId });
+    await Notification.deleteMany({ user: employeeId });
+    await Meeting.updateMany(
+      { participants: employeeId },
+      { $pull: { participants: employeeId } }
+    );
+
+    // Delete the account last: if anything above fails the account is
+    // still intact and the operation can simply be retried.
+    await user.deleteOne();
+
+    return res.status(200).json({
+      success: true,
+      message: "Employee deleted successfully",
+      data: {
+        id: employeeId,
+      },
+    });
+  } catch (error) {
+    console.error("Delete employee error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+    });
+  }
+};
+
 module.exports = {
   createEmployee,
   getUsers,
   getUserById,
   updateUser,
   updateUserStatus,
+  deleteEmployee,
 };

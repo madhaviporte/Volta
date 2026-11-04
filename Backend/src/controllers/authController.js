@@ -5,9 +5,9 @@ const generateToken = require("../utils/generateToken");
 const { isText, isEmail, hasMinLength } = require("../utils/validation");
 
 // A fixed bcrypt hash of a throwaway string (not a credential, grants
-// nothing). Comparing against it when the email is unknown keeps the login
-// response time uniform, so timing cannot reveal which emails are
-// registered.
+// nothing). Every rejected sign-in still performs exactly one bcrypt
+// comparison, so "no such account" and "wrong password" take comparable
+// time even though their messages now differ on purpose (below).
 const DUMMY_PASSWORD_HASH =
   "$2b$10$lMj1PBUzaRfKhu.4Qkp1bu/3sKmZgncu70EM3keMOCKng5euG.zPq";
 
@@ -24,26 +24,50 @@ const login = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email });
-
-    // Always run exactly one bcrypt comparison — for an unknown email the
-    // password is compared against DUMMY_PASSWORD_HASH, so response times
-    // do not distinguish "no such user" from "wrong password".
-    const isPasswordValid = await bcrypt.compare(
-      password,
-      user ? user.password : DUMMY_PASSWORD_HASH
-    );
-
-    if (!user || !isPasswordValid) {
-      return res.status(401).json({
+    // A malformed address is answered as such, before any lookup: it is a
+    // formatting mistake, not a credential mistake.
+    if (!isEmail(email)) {
+      return res.status(400).json({
         success: false,
-        message: "Invalid email or password",
+        message: "Enter a valid email address",
       });
     }
 
-    // The account state is only revealed after the password is proven, so
-    // an unauthenticated caller can never confirm an inactive account
-    // exists (a wrong password on it answers the same generic 401).
+    const user = await User.findOne({ email });
+
+    // SECURITY TRADE-OFF (deliberate, requested): the two rejection cases
+    // are reported separately so staff get a usable message -
+    //   unknown email  -> "Email address is incorrect or not registered."
+    //   wrong password -> "Incorrect password. Please try again."
+    // This is account enumeration: anyone who can reach this endpoint can
+    // test whether an address has an account. It is accepted here because
+    // Volta is an internal tool whose sign-in page is not public. Outside
+    // that setting, restore a single generic message for both cases.
+    if (!user) {
+      // One bcrypt comparison runs on every rejection path, so the two
+      // responses still take comparable time (with the messages already
+      // distinct, timing must not leak anything extra).
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+
+      return res.status(401).json({
+        success: false,
+        message: "Email address is incorrect or not registered.",
+      });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Incorrect password. Please try again.",
+      });
+    }
+
+    // The account state is revealed only after the password is proven: a
+    // wrong password on an inactive account answers the same "Incorrect
+    // password" 401 as any other account, so an inactive state is never
+    // disclosed to someone who does not already know its password.
     if (!user.isActive) {
       return res.status(403).json({
         success: false,

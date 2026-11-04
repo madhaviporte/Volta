@@ -3,6 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
+const mongoose = require("mongoose");
 
 const connectDB = require("./src/config/db");
 const authRoutes = require("./src/routes/authRoutes");
@@ -18,7 +19,7 @@ const Notification = require("./src/models/Notification");
 const {
   verifyEmailConnection,
   isEmailEnabled,
-  describeEmailConfig,
+  logEmailSetupProblem,
 } = require("./src/utils/emailService");
 const {
   retryFailedNotificationEmails,
@@ -166,7 +167,9 @@ const start = async () => {
   // One line that states, from the production process itself, whether
   // email can send at all and which SMTP_* names are absent (names only,
   // never values). This is the first thing to look for in the Render logs.
-  console.log(describeEmailConfig());
+  // Only a broken email setup is ever printed here; a healthy
+  // configuration is silent, so the startup log stays clean.
+  logEmailSetupProblem();
 
   // Verify the SMTP connection once at startup (informational only -
   // skipped entirely when email is disabled or unconfigured, so an
@@ -179,12 +182,25 @@ const start = async () => {
   // The same cadence retries any notification email whose SMTP delivery
   // failed (bounded: capped attempts, capped batch - no extra timers).
   const runScheduledJobs = () => {
+    // Skip while MongoDB is unreachable (network switch, Atlas outage):
+    // a disconnected database would only log the same failure on every
+    // tick. The driver reconnects on its own and the jobs then run on the
+    // hook below; missed reminders are recreated safely by their dedupe
+    // keys and missed email retries are picked up by the next run.
+    if (mongoose.connection.readyState !== 1) {
+      return;
+    }
+
     generateDeadlineNotifications();
     retryFailedNotificationEmails();
   };
 
   runScheduledJobs();
   setInterval(runScheduledJobs, 6 * 60 * 60 * 1000);
+
+  // After an outage the connection comes back mid-cycle: run the skipped
+  // jobs once instead of waiting up to 6 hours for the next tick.
+  mongoose.connection.on("reconnected", runScheduledJobs);
 };
 
 start();

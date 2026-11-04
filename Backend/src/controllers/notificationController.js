@@ -103,6 +103,15 @@ const createActivityNotification = async ({ user, task, type, message, dedupeKey
 // Completed tasks are skipped, so they never create overdue notifications.
 // Called at server start, every 6 hours, and when a user opens their notifications.
 const generateDeadlineNotifications = async () => {
+  // Skip while the database is not connected (network switch, Atlas
+  // outage): the queries would buffer and fail after 10s, logging the
+  // same error on every scheduler tick and every notification fetch.
+  // Missed reminders are recreated after reconnecting - the dedupe keys
+  // in createNotificationOnce make that safe.
+  if (mongoose.connection.readyState !== 1) {
+    return;
+  }
+
   try {
     // status "$ne" Completed means "not equal to Completed"
     const tasks = await Task.find({ status: { $ne: "Completed" } });

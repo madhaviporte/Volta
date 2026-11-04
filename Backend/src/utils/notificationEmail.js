@@ -96,14 +96,20 @@ const safeErrorMessage = (error) =>
     .replace(/[\r\n\t]+/g, " ")
     .slice(0, MAX_ERROR_LENGTH);
 
-const frontendBase = () =>
-  String(process.env.FRONTEND_BASE_URL || "").replace(/\/+$/, "");
+// The base URL comes ONLY from the backend environment
+// (FRONTEND_BASE_URL), trimmed and stripped of trailing slashes so a value
+// pasted with a stray space or a trailing "/" still produces exactly
+// ${FRONTEND_BASE_URL}/tasks/{taskId}. Empty/whitespace-only/unset means
+// the email simply goes out without the button.
+const frontendBase = () => {
+  const raw = process.env.FRONTEND_BASE_URL;
+  return typeof raw === "string" ? raw.trim().replace(/\/+$/, "") : "";
+};
 
 // The action link uses the REAL existing frontend routes only:
 //   tasks   -> {FRONTEND_BASE_URL}/tasks/{taskId}
 //   meetings-> {FRONTEND_BASE_URL}/meetings
-// No tokens and no invented routes. When FRONTEND_BASE_URL is not
-// configured the email simply goes out without the button.
+// No tokens and no invented routes.
 const actionLinkFor = (notification, task) => {
   const base = frontendBase();
 
@@ -306,24 +312,16 @@ const dispatchNotificationEmail = async (notificationId) => {
         { _id: claimed._id, emailStatus: "sending" },
         { $set: { emailStatus: "skipped" } }
       );
-
-      // Server-side trace only: id and type, never the address or content.
-      console.log(
-        `Notification email skipped (${claimed.type}, ${claimed._id}): recipient inactive or has no usable address`
-      );
       return;
     }
 
     const task = claimed.task ? await Task.findById(claimed.task) : null;
     const email = buildNotificationEmail(claimed, recipient, task);
 
-    // Resolves only when SMTP accepts the message; "sent" is never
-    // written before that happens.
+    // Resolves only when SMTP (or the Resend API) accepts the message;
+    // "sent" is never written before that happens. Success is not logged -
+    // only failures reach the terminal.
     await emailService.sendEmail(email);
-
-    // Server-side trace so production logs show real deliveries: id and
-    // type only - never the recipient address or message content.
-    console.log(`Notification email delivered (${claimed.type}, ${claimed._id})`);
 
     try {
       await Notification.updateOne(

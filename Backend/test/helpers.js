@@ -21,6 +21,14 @@ const Comment = require("../src/models/Comment");
 const TaskHistory = require("../src/models/TaskHistory");
 const Notification = require("../src/models/Notification");
 
+// Resolve DNS the same way the spawned servers do (system resolvers first,
+// public fallback only when the OS resolver fails), so the suite behaves
+// the same on restrictive networks as production. Idempotent and a no-op
+// on networks where the system resolver works.
+const { installDnsFallback } = require("../src/config/dnsFallback");
+
+installDnsFallback();
+
 // A secret used only by spawned test servers. It is a placeholder, never a
 // production credential; tests that need tokens sign them with this value.
 const TEST_JWT_SECRET = "test-only-jwt-secret-placeholder";
@@ -96,6 +104,11 @@ const startServer = async (extraEnv = {}) => {
       // suite must never attempt real delivery. Email tests opt in
       // explicitly through extraEnv (pointing SMTP at a local stub).
       EMAIL_ENABLED: "false",
+      // Pin the transport too: a developer's .env may carry an
+      // EMAIL_PROVIDER value from other work (gmail/resend), which would
+      // otherwise silently disable or reroute a stubbed email test.
+      // Test files can still opt in through extraEnv (e.g. resend).
+      EMAIL_PROVIDER: "smtp",
       ...extraEnv,
     },
     stdio: ["ignore", "pipe", "pipe"],

@@ -61,7 +61,7 @@ test("employee can log in", async () => {
   assert.equal(res.body.user.role, "employee");
 });
 
-test("wrong password and unknown email answer the identical generic 401", async () => {
+test("unknown email and wrong password are reported separately", async () => {
   const wrongPassword = await api.post("/api/auth/login", {
     body: { email: employee.email, password: "definitely-not-the-password" },
   });
@@ -72,18 +72,57 @@ test("wrong password and unknown email answer the identical generic 401", async 
 
   assert.equal(wrongPassword.status, 401);
   assert.equal(unknownEmail.status, 401);
-  // Same message for both -> no user enumeration through the body
-  assert.equal(wrongPassword.body.message, unknownEmail.body.message);
-  assert.equal(wrongPassword.body.message, "Invalid email or password");
+
+  // The two cases are deliberately distinguishable (account enumeration is
+  // accepted for this internal tool; see authController.js).
+  assert.equal(
+    wrongPassword.body.message,
+    "Incorrect password. Please try again."
+  );
+  assert.equal(
+    unknownEmail.body.message,
+    "Email address is incorrect or not registered."
+  );
 });
 
-test("inactive account with a WRONG password answers the generic 401 (existence not disclosed)", async () => {
+test("manager logins get the same two distinct messages as employees", async () => {
+  const wrongPassword = await api.post("/api/auth/login", {
+    body: { email: manager.email, password: "wrong-manager-password" },
+  });
+  assert.equal(wrongPassword.status, 401);
+  assert.equal(
+    wrongPassword.body.message,
+    "Incorrect password. Please try again."
+  );
+
+  const unknownEmail = await api.post("/api/auth/login", {
+    body: { email: "no-such-manager@volta.test", password: PASSWORD },
+  });
+  assert.equal(unknownEmail.status, 401);
+  assert.equal(
+    unknownEmail.body.message,
+    "Email address is incorrect or not registered."
+  );
+});
+
+test("a malformed email answers 400 with an email-format message", async () => {
+  for (const email of ["not-an-email", "missing@domain", "@volta.test", "a b@volta.test"]) {
+    const res = await api.post("/api/auth/login", {
+      body: { email, password: PASSWORD },
+    });
+
+    assert.equal(res.status, 400, `expected 400 for ${email}`);
+    assert.equal(res.body.message, "Enter a valid email address");
+  }
+});
+
+test("inactive account with a WRONG password only reports the wrong password", async () => {
   const res = await api.post("/api/auth/login", {
     body: { email: inactiveUser.email, password: "wrong-password-here" },
   });
 
   assert.equal(res.status, 401);
-  assert.equal(res.body.message, "Invalid email or password");
+  assert.equal(res.body.message, "Incorrect password. Please try again.");
 });
 
 test("inactive account with the CORRECT password is told the account is inactive", async () => {
