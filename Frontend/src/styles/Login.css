@@ -73,3 +73,29 @@
     padding: 28px 20px;
   }
 }
+
+/* Quiet footer line under the login form linking to the public Privacy
+   Policy page (Login.jsx). */
+.login-legal {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.login-legal a {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.login-legal a:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+.login-legal-sep {
+  margin: 0 8px;
+  color: var(--text-light);
+}

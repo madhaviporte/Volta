@@ -1,0 +1,286 @@
+/* PrivacyPolicy.css — public policy page (src/pages/PrivacyPolicy.jsx).
+   Everything here is built from the tokens in global.css, so the page
+   follows the same light/dark palettes (theme.css) and the same type
+   scale as the login page and the dashboards. Only layout, spacing and
+   the reading measure are defined here — no new colours. */
+
+.policy-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--bg-app);
+}
+
+/* ---------- Top bar (brand + theme toggle + back link) ---------- */
+
+.policy-topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.policy-topbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 14px 24px;
+}
+
+.policy-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-main);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.06em;
+}
+
+.policy-brand:hover {
+  color: var(--text-main);
+}
+
+.policy-brand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: var(--radius-md);
+}
+
+.policy-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.policy-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.policy-back:hover {
+  background: var(--surface-hover);
+  color: var(--text-main);
+}
+
+.policy-back:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ---------- Content card ---------- */
+
+.policy-main {
+  flex: 1;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px 24px 48px;
+}
+
+.policy-card {
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  box-shadow: var(--shadow-sm);
+}
+
+.policy-heading {
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.policy-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.policy-heading h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.policy-updated {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ---------- Reading styles ---------- */
+
+.policy-card section {
+  margin-top: 30px;
+}
+
+.policy-card h2 {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+  margin-bottom: 10px;
+}
+
+.policy-card p {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.policy-card p + p {
+  margin-top: 10px;
+}
+
+.policy-card ul {
+  margin: 10px 0 0 18px;
+  padding: 0;
+}
+
+.policy-card li {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.7;
+  margin-bottom: 8px;
+  padding-left: 2px;
+}
+
+.policy-card li:last-child {
+  margin-bottom: 0;
+}
+
+.policy-card strong {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.policy-card a {
+  color: var(--primary);
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.policy-card a:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+/* Contact callout at the end of the page */
+.policy-contact {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--primary-solid);
+  border-radius: var(--radius-md);
+  background: var(--subtle-bg);
+  color: var(--primary);
+}
+
+/* ---------- Footer ---------- */
+
+.policy-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px 32px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.policy-footer a {
+  color: var(--text-muted);
+}
+
+.policy-footer a:hover {
+  color: var(--primary);
+}
+
+.policy-footer-sep {
+  color: var(--text-light);
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 768px) {
+  .policy-topbar-inner {
+    padding: 12px 16px;
+  }
+
+  .policy-main {
+    padding: 20px 16px 36px;
+  }
+
+  .policy-card {
+    padding: 24px 20px;
+    border-radius: var(--radius-md);
+  }
+
+  .policy-heading h1 {
+    font-size: 23px;
+  }
+
+  .policy-card section {
+    margin-top: 26px;
+  }
+
+  .policy-footer {
+    padding: 0 16px 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* The back-link label is the first thing to go: the arrow still reads
+     as "back" and the row stays on one line on the narrowest phones. */
+  .policy-back span {
+    display: none;
+  }
+
+  .policy-back {
+    padding: 8px 10px;
+  }
+
+  .policy-card {
+    padding: 20px 16px;
+  }
+
+  .policy-contact {
+    display: flex;
+    width: 100%;
+  }
+}

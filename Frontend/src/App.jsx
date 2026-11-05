@@ -7,6 +7,8 @@ import ManagerTasks from "./pages/ManagerTasks";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import TaskDetails from "./pages/TaskDetails";
 import MeetingUpdates from "./pages/MeetingUpdates";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 import ProtectedRoute from "./components/ProtectedRoute";
 import {
   clearSession,
@@ -30,6 +32,8 @@ import "./styles/shared/StatCards.css";
 import "./styles/shared/Modal.css";
 import "./styles/Navbar.css";
 import "./styles/Login.css";
+import "./styles/PrivacyPolicy.css";
+import "./styles/TermsOfService.css";
 import "./styles/NotificationBell.css";
 import "./styles/TaskDetails.css";
 
@@ -54,6 +58,13 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+
+        {/* Public legal page: deliberately NOT wrapped in ProtectedRoute,
+            so it opens for a visitor who is not signed in */}
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+
+        {/* Public legal page: also outside every ProtectedRoute */}
+        <Route path="/terms-of-service" element={<TermsOfService />} />
 
         {/* Only managers can open this page */}
         <Route

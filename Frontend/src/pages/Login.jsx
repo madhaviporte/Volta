@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Zap, Mail, Lock, LogIn, AlertCircle } from "lucide-react";
 import api, { resetSessionExpired } from "../services/api";
 import { getSessionUser, hasValidSession, homePathFor } from "../services/auth";
@@ -218,6 +218,13 @@ const Login = () => {
             <span>{submitting ? "Signing in..." : "Login to Portal"}</span>
           </button>
         </form>
+
+        {/* Public legal pages, both reachable without signing in */}
+        <p className="login-legal">
+          <Link to="/privacy-policy">Privacy Policy</Link>
+          <span className="login-legal-sep">·</span>
+          <Link to="/terms-of-service">Terms of Service</Link>
+        </p>
       </div>
     </div>
   );

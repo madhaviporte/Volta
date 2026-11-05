@@ -1,0 +1,40 @@
+/* TermsOfService.css — public Terms page (src/pages/TermsOfService.jsx).
+   The page deliberately reuses the legal page shell defined in
+   PrivacyPolicy.css (.policy-page, .policy-topbar, .policy-card,
+   .policy-heading, .policy-footer and the reading styles), so both legal
+   pages keep exactly the same layout, spacing, responsive rules and both
+   themes. This file only adds what the Terms page needs on top of it: the
+   cross-link to the Privacy Policy. Everything is built from the existing
+   tokens — no new colours. */
+
+.legal-crosslink {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: 14px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: var(--subtle-bg);
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.legal-crosslink a {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.legal-crosslink a:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .legal-crosslink {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+}
